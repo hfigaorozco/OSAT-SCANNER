@@ -1,0 +1,38 @@
+name: osat_tracer_mobile
+description: OSAT Tracer - App móvil para operadores de línea de producción
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # Estado
+  provider: ^6.1.2
+
+  # Red / API
+  http: ^1.2.1
+
+  # Almacenamiento local (token, sesión)
+  shared_preferences: ^2.2.3
+
+  # Scanner QR
+  mobile_scanner: ^5.2.3
+
+  # Cámara para fotos de defectos
+  image_picker: ^1.1.2
+
+  # Fechas/horas formateadas
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
