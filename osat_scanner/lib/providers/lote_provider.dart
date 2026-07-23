@@ -13,6 +13,8 @@ class LoteProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   bool get tieneEtapaEnCurso => _loteActual?.etapaActual != null;
+  bool get puedeCompletarEtapa => _loteActual?.puedeCompletarEtapa ?? false;
+  bool get puedePonerEnHold => _loteActual?.puedePonerEnHold ?? false;
 
   Future<bool> buscarLote(String codigo) async {
     _loading = true;
@@ -45,6 +47,11 @@ class LoteProvider extends ChangeNotifier {
     List<DefectoRegistrado> defectos = const [],
   }) async {
     if (_loteActual == null) return false;
+    if (_loteActual!.enHold) {
+      _error = 'Este lote está en Hold. Contacta al supervisor para continuar.';
+      notifyListeners();
+      return false;
+    }
     final etapa = _loteActual!.etapaActual;
     if (etapa == null) {
       _error = 'No hay etapa en curso.';
@@ -85,6 +92,11 @@ class LoteProvider extends ChangeNotifier {
 
   Future<bool> ponerEnHold(String motivo) async {
     if (_loteActual == null) return false;
+    if (_loteActual!.enHold) {
+      _error = 'Este lote ya está en Hold.';
+      notifyListeners();
+      return false;
+    }
     _loading = true;
     _error = null;
     notifyListeners();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:osat_tracer_mobile/models/lote.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/lote_provider.dart';
@@ -15,7 +16,7 @@ class CompletarEtapaScreen extends StatefulWidget {
 }
 
 class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
-  String _resultado = 'aprobado'; // aprobado | rechazado | hold
+  String _resultado = 'compl'; // Completado | No Completado | hold
   int _unidadesDefecto = 0;
   final _obsCtrl = TextEditingController();
   final List<DefectoRegistrado> _defectos = [];
@@ -80,34 +81,55 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
   }
 
   Future<void> _guardar() async {
-    if (_resultado == 'rechazado' && _unidadesDefecto == 0) {
-      OsatToast.show(context,
-          message: 'Indica las unidades con defecto para rechazar.',
-          tipo: ToastTipo.warning);
+    if (_resultado == 'nocom' && _unidadesDefecto == 0) {
+      OsatToast.show(
+        context,
+        message: 'Indica las unidades con defecto para rechazar.',
+        tipo: ToastTipo.warning,
+      );
       return;
     }
 
-    setState(() => _guardando = true);
     final loteProv = context.read<LoteProvider>();
-    final ok = await loteProv.completarEtapa(
-      resultado: _resultado,
-      unidadesDefecto: _unidadesDefecto,
-      observaciones: _obsCtrl.text.trim().isEmpty ? null : _obsCtrl.text.trim(),
-      defectos: _defectos,
-    );
-    setState(() => _guardando = false);
+    bool ok = false;
 
+    setState(() => _guardando = true);
+
+    if (_resultado == 'enhol') {
+      ok = await loteProv.ponerEnHold(
+        _obsCtrl.text.trim(),
+      );
+
+    } else {
+      ok = await loteProv.completarEtapa(
+        resultado: _resultado,
+        unidadesDefecto: _unidadesDefecto,
+        observaciones: _obsCtrl.text.trim().isEmpty
+            ? null
+            : _obsCtrl.text.trim(),
+        defectos: _defectos,
+      );
+
+    }
+
+    setState(() => _guardando = false);
     if (!mounted) return;
     if (ok) {
-      Navigator.of(context).pop();
-      OsatToast.show(context,
-          message: 'Etapa completada exitosamente!', tipo: ToastTipo.success);
+      Navigator.pop(context);
+      OsatToast.show(
+        context,
+        message: 'Etapa completada exitosamente.',
+        tipo: ToastTipo.success,
+      );
+
     } else {
-      OsatToast.show(context,
-          message: loteProv.error ?? 'Error al guardar. Intenta de nuevo.',
-          tipo: ToastTipo.error,
-          actionLabel: 'Reintentar',
-          onAction: _guardar);
+      OsatToast.show(
+        context,
+        message: loteProv.error ?? 'Error al guardar.',
+        tipo: ToastTipo.error,
+        actionLabel: 'Reintentar',
+        onAction: _guardar,
+      );
     }
   }
 
@@ -117,13 +139,18 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
     final lote = loteProv.loteActual;
     final etapa = lote?.etapaActual;
 
-    if (lote == null || etapa == null) {
+    if (lote == null || etapa == null || lote.enHold) {
       return Scaffold(
         backgroundColor: AppColors.bgApp,
         appBar: AppBar(backgroundColor: AppColors.bgApp),
-        body: const Center(
-          child: Text('No hay una etapa en curso.',
-              style: TextStyle(color: Colors.white)),
+        body: Center(
+          child: Text(
+            lote?.enHold == true
+                ? 'Este lote está en Hold. No es posible registrar etapas.'
+                : 'No hay una etapa en curso.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
@@ -210,25 +237,25 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                             _ResultadoOption(
                               label: 'Aprobado',
                               color: AppColors.green,
-                              selected: _resultado == 'aprobado',
+                              selected: _resultado == 'compl',
                               onTap: () =>
-                                  setState(() => _resultado = 'aprobado'),
+                                  setState(() => _resultado = 'compl'),
                             ),
                             const SizedBox(width: 8),
                             _ResultadoOption(
                               label: 'Rechazado',
                               color: AppColors.red,
-                              selected: _resultado == 'rechazado',
+                              selected: _resultado == 'nocom',
                               onTap: () =>
-                                  setState(() => _resultado = 'rechazado'),
+                                  setState(() => _resultado = 'nocom'),
                             ),
                             const SizedBox(width: 8),
                             _ResultadoOption(
                               label: 'Hold',
                               color: AppColors.gold,
-                              selected: _resultado == 'hold',
+                              selected: _resultado == 'enhol',
                               onTap: () =>
-                                  setState(() => _resultado = 'hold'),
+                                  setState(() => _resultado = 'enhol'),
                             ),
                           ],
                         ),
@@ -366,7 +393,7 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                   child: ElevatedButton(
                     onPressed: _guardando ? null : _guardar,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _resultado == 'hold'
+                      backgroundColor: _resultado == 'enhol'
                           ? AppColors.gold
                           : AppColors.green,
                       foregroundColor: Colors.white,
@@ -382,7 +409,7 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                                 color: Colors.white, strokeWidth: 2.4),
                           )
                         : Text(
-                            _resultado == 'hold'
+                            _resultado == 'enhol'
                                 ? 'Enviar a Hold'
                                 : 'Completar etapa',
                             style: const TextStyle(

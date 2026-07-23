@@ -310,13 +310,15 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             TrazabilidadStepper(
               lote: loteProv.loteActual!,
-              onCompletarEtapa: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const CompletarEtapaScreen(),
-                ));
-              },
+              onCompletarEtapa: loteProv.puedeCompletarEtapa
+                  ? () {
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const CompletarEtapaScreen(),
+                      ));
+                    }
+                  : null,
             ),
-            if (loteProv.tieneEtapaEnCurso) ...[
+            if (loteProv.puedePonerEnHold) ...[
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,

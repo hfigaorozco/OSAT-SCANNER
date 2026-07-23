@@ -63,8 +63,11 @@ class LoteService {
     required Lote lote,
     required String motivo,
   }) async {
+    if (lote.enHold) {
+      throw ApiException('Este lote ya está en Hold.');
+    }
     await ApiClient.patch(ApiConfig.updateOblea(lote.numero), {
-      'estado': 'HOLD',
+      'estado': 'enhol',
       'hold_motivo': motivo,
     });
   }

@@ -8,7 +8,8 @@ EstadoEtapa estadoEtapaFromString(String? raw) {
   if (s.contains('curso') || s.contains('proceso') || s.contains('activo')) {
     return EstadoEtapa.enCurso;
   }
-  if (s.contains('hold')) return EstadoEtapa.hold;
+
+  if (s.contains('enhol') || s.contains('hold')) return EstadoEtapa.hold;
   if (s.contains('rechaz') || s.contains('nocom')) return EstadoEtapa.rechazado;
   return EstadoEtapa.pendiente;
 }

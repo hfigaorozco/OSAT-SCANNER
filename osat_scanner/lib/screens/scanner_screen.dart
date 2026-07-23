@@ -197,18 +197,21 @@ class _ScannerScreenState extends State<ScannerScreen> {
                       const SizedBox(height: 10),
                       TrazabilidadStepper(
                         lote: lote,
-                        onCompletarEtapa: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const CompletarEtapaScreen(),
-                          ));
-                        },
+                        onCompletarEtapa: lote.puedeCompletarEtapa
+                            ? () {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CompletarEtapaScreen(),
+                                ));
+                              }
+                            : null,
                       ),
                       const SizedBox(height: 14),
                       _ProgresoEtapa(lote: lote),
                       const SizedBox(height: 14),
                       Row(
                         children: [
-                          if (lote.etapaActual != null)
+                          if (lote.puedeCompletarEtapa)
                             Expanded(
                               child: ElevatedButton(
                                 onPressed: () {
@@ -226,8 +229,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                 child: const Text('Completar Etapa'),
                               ),
                             ),
-                          const SizedBox(width: 10),
-                          Expanded(
+                          if (lote.puedeCompletarEtapa && lote.puedePonerEnHold)
+                            const SizedBox(width: 10),
+                          if (lote.puedePonerEnHold)
+                            Expanded(
                             child: ElevatedButton(
                               onPressed: () {
                                 Navigator.of(context).push(MaterialPageRoute(
@@ -242,7 +247,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                               ),
                               child: const Text('Poner en Hold'),
                             ),
-                          ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 20),

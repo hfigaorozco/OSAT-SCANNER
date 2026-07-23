@@ -176,7 +176,9 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
                         ),
                       ),
                       // Badge o botón completar
-                      if (isActive && widget.onCompletarEtapa != null)
+                      if (isActive &&
+                          !widget.lote.enHold &&
+                          widget.onCompletarEtapa != null)
                         ElevatedButton(
                           onPressed: widget.onCompletarEtapa,
                           style: ElevatedButton.styleFrom(
