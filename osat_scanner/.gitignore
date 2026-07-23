@@ -12,7 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# Intellij related
 *.iml
 *.ipr
 *.iws
