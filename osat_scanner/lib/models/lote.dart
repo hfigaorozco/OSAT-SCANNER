@@ -4,7 +4,7 @@ enum EstadoLote { enProceso, aprobado, rechazado, hold, pendiente }
 
 EstadoLote estadoLoteFromString(String? raw) {
   final s = (raw ?? '').toLowerCase();
-  if (s.contains('hold')) return EstadoLote.hold;
+  if (s.contains('enhol') || s.contains('hold')) return EstadoLote.hold;
   if (s.contains('aprob') || s.contains('complet') || s.contains('termi')) {
     return EstadoLote.aprobado;
   }
@@ -75,6 +75,9 @@ class Lote {
 
   bool get enHold => estado == EstadoLote.hold;
 
+  bool get puedeCompletarEtapa => !enHold && etapaActual != null;
+  bool get puedePonerEnHold => !enHold && etapaActual != null;
+
   factory Lote.fromJson(Map<String, dynamic> json) {
     final etapasJson = (json['etapas'] as List?) ?? [];
     final etapas = <Etapa>[];
@@ -102,7 +105,10 @@ class Lote {
         codigoPaso: e['codigo']?.toString() ?? 'P$i',
         nombre: e['nombre'] ?? 'Paso ${i + 1}',
         orden: i + 1,
-        estado: estadoEtapaFromString(e['estado']),
+        
+        estado: estadoEtapaFromString(
+          e['estado_paso']?.toString() ?? e['estado']?.toString(),
+        ),
         operador: e['operador'],
         maquina: e['maquina'],
         horaInicioIso: e['hora_inicio'],
@@ -124,7 +130,9 @@ class Lote {
       ordenFolio:
           'ORD-${(json['orden'] ?? '').toString().padLeft(4, '0')}',
       proceso: json['proceso']?.toString() ?? '—',
-      estado: estadoLoteFromString(json['estado']?.toString()),
+      estado: estadoLoteFromString(
+        json['estado_oblea']?.toString() ?? json['estado']?.toString(),
+      ),
       diesIniciales: json['diesGenerados'] ?? 0,
       diesActivos: json['dies_activos'] ?? json['diesGenerados'] ?? 0,
       scrap: json['scrap'] ?? 0,
