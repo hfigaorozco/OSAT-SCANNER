@@ -9,11 +9,8 @@ import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // App pensada para tablet en horizontal (landscape)
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
+  // La orientación se maneja dinámicamente en _AppLifecycleWrapper
+  // según el tamaño de pantalla del dispositivo
   runApp(const OsatTracerApp());
 }
 
@@ -45,8 +42,9 @@ class OsatTracerApp extends StatelessWidget {
   }
 }
 
-/// RFM01 — Si la app lleva más de 30 minutos en segundo plano,
-/// se solicita autenticación de nuevo al volver a foreground.
+/// Detecta si es tablet o teléfono y fuerza orientación apropiada.
+/// Tablet (shortestSide > 600): landscape forzado
+/// Teléfono (shortestSide <= 600): portrait forzado
 class _AppLifecycleWrapper extends StatefulWidget {
   final Widget child;
   const _AppLifecycleWrapper({required this.child});
@@ -57,6 +55,8 @@ class _AppLifecycleWrapper extends StatefulWidget {
 
 class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
     with WidgetsBindingObserver {
+  bool _orientacionConfigurada = false;
+
   @override
   void initState() {
     super.initState();
@@ -64,8 +64,41 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_orientacionConfigurada) {
+      _configurarOrientacion();
+      _orientacionConfigurada = true;
+    }
+  }
+
+  void _configurarOrientacion() {
+    final shortestSide = MediaQuery.of(context).size.shortestSide;
+    final esTablet = shortestSide > 600;
+
+    if (esTablet) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Restaurar todas las orientaciones al salir
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     super.dispose();
   }
 
@@ -81,7 +114,6 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
 
   Future<void> _checkInactivity() async {
     final auth = context.read<AuthProvider>();
-    // tryRestoreSession ya valida los 30 min y hace logout si expiró
     final stillValid = await auth.tryRestoreSession();
     if (!stillValid && mounted) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -93,4 +125,9 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// Helper global para saber si el dispositivo es tablet
+bool esTablet(BuildContext context) {
+  return MediaQuery.of(context).size.shortestSide > 600;
 }
