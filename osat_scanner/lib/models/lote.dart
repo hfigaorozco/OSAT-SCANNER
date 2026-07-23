@@ -5,19 +5,22 @@ enum EstadoLote { enProceso, aprobado, rechazado, hold, pendiente }
 EstadoLote estadoLoteFromString(String? raw) {
   final s = (raw ?? '').toLowerCase();
   if (s.contains('hold')) return EstadoLote.hold;
-  if (s.contains('aprob') || s.contains('complet')) return EstadoLote.aprobado;
-  if (s.contains('rechaz')) return EstadoLote.rechazado;
-  if (s.contains('proceso') || s.contains('activo')) return EstadoLote.enProceso;
+  if (s.contains('aprob') || s.contains('complet') || s.contains('termi')) {
+    return EstadoLote.aprobado;
+  }
+  if (s.contains('rechaz') || s.contains('nocom')) return EstadoLote.rechazado;
+  if (s.contains('proceso') || s.contains('activo') || s.contains('proce')) {
+    return EstadoLote.enProceso;
+  }
   return EstadoLote.pendiente;
 }
 
-/// Representa una Oblea del backend, mostrada como "Lote" en el front.
 class Lote {
   final int numero;
-  final String folio; // LOT-2026-0001
+  final String folio;
   final int? ordenNumero;
-  final String ordenFolio; // ORD-2026-042
-  final String proceso; // OSAT Estándar
+  final String ordenFolio;
+  final String proceso;
   final EstadoLote estado;
   final int diesIniciales;
   final int diesActivos;
@@ -75,8 +78,26 @@ class Lote {
   factory Lote.fromJson(Map<String, dynamic> json) {
     final etapasJson = (json['etapas'] as List?) ?? [];
     final etapas = <Etapa>[];
+
     for (var i = 0; i < etapasJson.length; i++) {
       final e = etapasJson[i] as Map<String, dynamic>;
+
+      // tiempoEstimado puede venir como int (segundos) o string HH:MM:SS
+      int? tiempoSeg;
+      final te = e['tiempoEstimado'] ?? e['tiempo_estimado_seg'];
+      if (te is int) {
+        tiempoSeg = te;
+      } else if (te is String && te.isNotEmpty) {
+        try {
+          final parts = te.split(':');
+          tiempoSeg = int.parse(parts[0]) * 3600 +
+              int.parse(parts[1]) * 60 +
+              int.parse(parts.length > 2 ? parts[2] : '0');
+        } catch (_) {
+          tiempoSeg = null;
+        }
+      }
+
       etapas.add(Etapa(
         codigoPaso: e['codigo']?.toString() ?? 'P$i',
         nombre: e['nombre'] ?? 'Paso ${i + 1}',
@@ -84,10 +105,11 @@ class Lote {
         estado: estadoEtapaFromString(e['estado']),
         operador: e['operador'],
         maquina: e['maquina'],
-        horaInicio: e['hora_inicio'],
+        horaInicioIso: e['hora_inicio'],
         horaFin: e['hora_fin'],
         unidadesDefecto: e['unidades_defecto'] ?? 0,
         observaciones: e['observaciones'],
+        tiempoEstimadoSeg: tiempoSeg,
       ));
     }
 
@@ -99,7 +121,8 @@ class Lote {
       numero: numero,
       folio: 'LOT-${numero.toString().padLeft(4, '0')}',
       ordenNumero: json['orden'] is int ? json['orden'] : null,
-      ordenFolio: 'ORD-${(json['orden'] ?? '').toString().padLeft(4, '0')}',
+      ordenFolio:
+          'ORD-${(json['orden'] ?? '').toString().padLeft(4, '0')}',
       proceso: json['proceso']?.toString() ?? '—',
       estado: estadoLoteFromString(json['estado']?.toString()),
       diesIniciales: json['diesGenerados'] ?? 0,
