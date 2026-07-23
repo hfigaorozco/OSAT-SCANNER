@@ -34,7 +34,7 @@ class ApiConfig {
   /// 10.0.2.2 redirige al localhost de la PC host desde el emulador Android.
   /// Si pruebas en dispositivo físico, cambia esto a la IP local de tu PC
   /// (ej. 192.168.1.50) y asegúrate que el backend corra con 0.0.0.0:8001
-  static const String baseUrl = 'http://192.168.1.68:8001/api';
+  static const String baseUrl = 'http://10.0.2.2:8001/api';
 
   static const String login = '$baseUrl/v1/auth/login/';
   static const String logout = '$baseUrl/v1/auth/logout/';
