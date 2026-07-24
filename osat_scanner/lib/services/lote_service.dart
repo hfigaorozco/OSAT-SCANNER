@@ -1,5 +1,7 @@
 import '../models/lote.dart';
+import '../models/etapa.dart';
 import '../models/defecto.dart';
+import '../models/lote_resumen.dart';
 import '../utils/constants.dart';
 import 'api_client.dart';
 
@@ -38,6 +40,10 @@ class LoteService {
       throw ApiException(
           'Este lote está en Hold. Contacta al supervisor para continuar.');
     }
+    if (lote.rechazado) {
+      throw ApiException(
+          'Este lote fue rechazado y ya no puede continuar con más etapas.');
+    }
 
     final etapaActual = lote.etapaActual;
     if (etapaActual == null) {
@@ -63,10 +69,55 @@ class LoteService {
     required Lote lote,
     required String motivo,
   }) async {
+    if (lote.enHold) {
+      throw ApiException('Este lote ya está en Hold.');
+    }
     await ApiClient.patch(ApiConfig.updateOblea(lote.numero), {
-      'estado': 'HOLD',
+      'estado': 'enhol',
       'hold_motivo': motivo,
     });
+  }
+
+  /// En la web, el paso de Oblea a "Terminada"/"Rechazada" al completar la
+  /// última etapa lo hace `_avanzar_estado_lote_y_orden` en
+  /// client/produccion/views.py — una capa que el móvil no usa, porque
+  /// llama directo al API REST (`/v1/create/PasoRealizado/`). Sin este
+  /// paso, un lote terminado desde el móvil se quedaría "En Proceso" para
+  /// siempre en los listados de la web. Replicamos aquí solo la regla del
+  /// lote individual (no el cierre de la Orden completa, que depende del
+  /// estado de todos sus lotes hermanos).
+  static Future<bool> finalizarSiCorresponde(Lote lote) async {
+    if (lote.estado != EstadoLote.enProceso) return false;
+    if (lote.etapas.isEmpty) return false;
+    final quedaPendiente = lote.etapas.any((e) =>
+        e.estado == EstadoEtapa.pendiente || e.estado == EstadoEtapa.enCurso);
+    if (quedaPendiente) return false;
+
+    final hayRechazo =
+        lote.etapas.any((e) => e.estado == EstadoEtapa.rechazado);
+    await ApiClient.patch(ApiConfig.updateOblea(lote.numero), {
+      'estado': hayRechazo ? 'recha' : 'termi',
+    });
+    return true;
+  }
+
+  /// Búsqueda "de verdad": trae los lotes de la BD y regresa los que
+  /// coinciden con lo escrito (por número/folio), en vez de exigir el
+  /// código exacto como [buscarPorFolio].
+  static Future<List<LoteResumen>> buscarCoincidencias(String query) async {
+    final soloNumeros = query.replaceAll(RegExp(r'[^0-9]'), '');
+    if (soloNumeros.isEmpty) return [];
+
+    final data = await ApiClient.get(ApiConfig.obleas);
+    final lista = (data as List).cast<Map<String, dynamic>>();
+
+    final resultados = lista
+        .map((o) => LoteResumen.fromOblea(o))
+        .where((l) =>
+            l.folio.replaceAll(RegExp(r'[^0-9]'), '').contains(soloNumeros))
+        .toList();
+    resultados.sort((a, b) => b.numero.compareTo(a.numero));
+    return resultados;
   }
 
   /// Catálogo de defectos para el formulario de RFM06

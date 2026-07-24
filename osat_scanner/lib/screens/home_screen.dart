@@ -1,17 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/lote_provider.dart';
+import '../models/lote_resumen.dart';
+import '../services/lote_service.dart';
+import '../services/recientes_service.dart';
 import '../utils/constants.dart';
 import '../widgets/osat_bottom_nav.dart';
-import '../widgets/lote_header_card.dart';
-import '../widgets/trazabilidad_stepper.dart';
-import '../widgets/osat_toast.dart';
+import '../widgets/badge_estado.dart';
 import 'scanner_screen.dart';
 import 'alertas_screen.dart';
 import 'perfil_screen.dart';
-import 'completar_etapa_screen.dart';
-import 'hold_screen.dart';
+import 'trazado_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,17 +23,38 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
   final _codigoCtrl = TextEditingController();
+  Timer? _debounce;
+
+  List<LoteResumen> _recientes = [];
+  List<LoteResumen>? _resultados; // null = no se ha buscado nada todavía
+  bool _buscando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarRecientes();
+  }
 
   @override
   void dispose() {
     _codigoCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _cargarRecientes() async {
+    final lista = await RecientesService.obtener();
+    if (!mounted) return;
+    setState(() => _recientes = lista);
   }
 
   void _abrirScanner() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const ScannerScreen()))
-        .then((_) => setState(() => _navIndex = 0));
+        .then((_) {
+      setState(() => _navIndex = 0);
+      _cargarRecientes();
+    });
   }
 
   void _onNavTap(int index) {
@@ -44,34 +65,62 @@ class _HomeScreenState extends State<HomeScreen> {
           .then((_) => setState(() => _navIndex = 0));
       return;
     }
-    if (index == 3) {
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const PerfilScreen()))
-          .then((_) => setState(() => _navIndex = 0));
-      return;
-    }
     setState(() => _navIndex = index);
   }
 
-  Future<void> _buscarPorCodigo() async {
-    final codigo = _codigoCtrl.text.trim();
-    if (codigo.isEmpty) return;
-    final loteProv = context.read<LoteProvider>();
-    final ok = await loteProv.buscarLote(codigo);
-    if (!mounted) return;
-    if (ok) {
-      _codigoCtrl.clear();
-    } else if (loteProv.error != null) {
-      OsatToast.show(context, message: loteProv.error!, tipo: ToastTipo.error);
+  void _abrirPerfil() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const PerfilScreen()))
+        .then((_) => setState(() => _navIndex = 0));
+  }
+
+  void _onCambioTexto(String value) {
+    _debounce?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() => _resultados = null);
+      return;
     }
+    _debounce = Timer(
+        const Duration(milliseconds: 350), () => _ejecutarBusqueda(value));
+  }
+
+  /// RFM04 — Búsqueda real por coincidencias contra la BD (no exige el
+  /// código exacto).
+  Future<void> _ejecutarBusqueda(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => _resultados = null);
+      return;
+    }
+    setState(() => _buscando = true);
+    try {
+      final resultados = await LoteService.buscarCoincidencias(query);
+      if (!mounted) return;
+      setState(() {
+        _resultados = resultados;
+        _buscando = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _resultados = [];
+        _buscando = false;
+      });
+    }
+  }
+
+  Future<void> _abrirLote(int numero) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => TrazadoScreen(loteNumero: numero),
+    ));
+    if (!mounted) return;
+    _cargarRecientes();
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth     = context.watch<AuthProvider>();
-    final loteProv = context.watch<LoteProvider>();
+    final auth = context.watch<AuthProvider>();
     final empleado = auth.empleado;
-    final tablet   = MediaQuery.of(context).size.shortestSide > 600;
+    final tablet = MediaQuery.of(context).size.shortestSide > 600;
 
     return Scaffold(
       backgroundColor: AppColors.bgApp,
@@ -85,10 +134,12 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                  InkWell(
+                    onTap: _abrirPerfil,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
                         'Hola, ${empleado?.nombre ?? 'Operador'}',
                         style: const TextStyle(
                           color: Colors.white,
@@ -96,12 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        'Turno ${empleado?.turno ?? 'Hora-Hora'}',
-                        style: const TextStyle(
-                            color: AppColors.textMuted, fontSize: 12.5),
-                      ),
-                    ],
+                    ),
                   ),
                   StreamBuilder(
                     stream: Stream.periodic(const Duration(seconds: 30)),
@@ -122,9 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // ── Contenido principal — responsive ─────────────────────────
               Expanded(
-                child: tablet
-                    ? _layoutTablet(loteProv, empleado)
-                    : _layoutTelefono(loteProv),
+                child: tablet ? _layoutTablet() : _layoutTelefono(),
               ),
               const SizedBox(height: 12),
             ],
@@ -141,28 +185,15 @@ class _HomeScreenState extends State<HomeScreen> {
   // ════════════════════════════════════════════════════════════════
   // LAYOUT TABLET — 2 columnas (landscape)
   // ════════════════════════════════════════════════════════════════
-  Widget _layoutTablet(LoteProvider loteProv, dynamic empleado) {
+  Widget _layoutTablet() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Columna izquierda — trazabilidad
         Expanded(
           flex: 3,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Ultimo Lote Escaneado',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600)),
-              const SizedBox(height: 10),
-              Expanded(child: _trazabilidadWidget(loteProv, hint: 'Usa el botón "Escanear Lote" →')),
-            ],
-          ),
+          child: SingleChildScrollView(child: _seccionLotes()),
         ),
         const SizedBox(width: 20),
-        // Columna derecha — botón grande + búsqueda
         Expanded(
           flex: 2,
           child: Column(
@@ -181,23 +212,16 @@ class _HomeScreenState extends State<HomeScreen> {
   // ════════════════════════════════════════════════════════════════
   // LAYOUT TELÉFONO — stack vertical (portrait)
   // ════════════════════════════════════════════════════════════════
-  Widget _layoutTelefono(LoteProvider loteProv) {
+  Widget _layoutTelefono() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Botón de escaneo arriba — más pequeño en teléfono
           Center(child: _botonEscaneoGrande(size: 130)),
           const SizedBox(height: 12),
           _panelBusqueda(),
           const SizedBox(height: 20),
-          const Text('Ultimo Lote Escaneado',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          _trazabilidadWidget(loteProv, hint: 'Usa el botón de escaneo arriba'),
+          _seccionLotes(),
           const SizedBox(height: 20),
         ],
       ),
@@ -255,7 +279,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: TextField(
                   controller: _codigoCtrl,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: const TextStyle(
+                      color: AppColors.textDark, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Ingresa el código del lote',
                     hintStyle: const TextStyle(
@@ -270,12 +295,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderSide: BorderSide.none,
                     ),
                   ),
-                  onSubmitted: (_) => _buscarPorCodigo(),
+                  onChanged: _onCambioTexto,
+                  onSubmitted: _ejecutarBusqueda,
                 ),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: _buscarPorCodigo,
+                onPressed: () => _ejecutarBusqueda(_codigoCtrl.text),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.purple,
                   foregroundColor: Colors.white,
@@ -296,51 +322,58 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _trazabilidadWidget(LoteProvider loteProv,
-      {required String hint}) {
-    if (loteProv.loading) {
-      return const Center(
-          child: CircularProgressIndicator(color: AppColors.green));
-    }
-    if (loteProv.loteActual != null) {
-      return SingleChildScrollView(
-        child: Column(
-          children: [
-            LoteHeaderCard(lote: loteProv.loteActual!),
-            const SizedBox(height: 10),
-            TrazabilidadStepper(
-              lote: loteProv.loteActual!,
-              onCompletarEtapa: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const CompletarEtapaScreen(),
-                ));
-              },
-            ),
-            if (loteProv.tieneEtapaEnCurso) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const HoldScreen(),
-                    ));
-                  },
-                  icon: const Icon(Icons.pause, size: 18),
-                  label: const Text('Poner en Hold'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.gold,
-                    side: const BorderSide(color: AppColors.gold),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+  /// Muestra los resultados de búsqueda mientras se está buscando algo,
+  /// o el historial de últimos lotes escaneados cuando el buscador está vacío.
+  Widget _seccionLotes() {
+    final buscando = _codigoCtrl.text.trim().isNotEmpty || _resultados != null;
+
+    if (buscando) {
+      if (_buscando) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+              child: CircularProgressIndicator(color: AppColors.green)),
+        );
+      }
+      final resultados = _resultados ?? [];
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Resultados de búsqueda',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          if (resultados.isEmpty)
+            _mensajeVacio('No se encontraron lotes con ese código.')
+          else
+            ...resultados.map(_tarjetaLote),
+        ],
       );
     }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Últimos lotes escaneados',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        if (_recientes.isEmpty)
+          _mensajeVacio(
+              'No has escaneado ningún lote todavía.\nUsa el botón de escaneo o el buscador de arriba.')
+        else
+          ..._recientes.map(_tarjetaLote),
+      ],
+    );
+  }
+
+  Widget _mensajeVacio(String texto) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
@@ -348,9 +381,42 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       alignment: Alignment.center,
       child: Text(
-        'No has escaneado ningún lote todavía.\n$hint',
+        texto,
         textAlign: TextAlign.center,
         style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      ),
+    );
+  }
+
+  Widget _tarjetaLote(LoteResumen l) {
+    return InkWell(
+      onTap: () => _abrirLote(l.numero),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l.folio,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    fontFamily: 'monospace',
+                    color: AppColors.textDark),
+              ),
+            ),
+            BadgeEstadoLote(estado: l.estado),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right,
+                color: AppColors.textMuted, size: 20),
+          ],
+        ),
       ),
     );
   }

@@ -15,7 +15,7 @@ class CompletarEtapaScreen extends StatefulWidget {
 }
 
 class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
-  String _resultado = 'aprobado'; // aprobado | rechazado | hold
+  String _resultado = 'compl'; // Completado | No Completado | hold
   int _unidadesDefecto = 0;
   final _obsCtrl = TextEditingController();
   final List<DefectoRegistrado> _defectos = [];
@@ -80,34 +80,61 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
   }
 
   Future<void> _guardar() async {
-    if (_resultado == 'rechazado' && _unidadesDefecto == 0) {
-      OsatToast.show(context,
-          message: 'Indica las unidades con defecto para rechazar.',
-          tipo: ToastTipo.warning);
-      return;
+    if (_resultado == 'nocom') {
+      final lote = context.read<LoteProvider>().loteActual;
+      final diesActivos = lote?.diesActivos ?? 0;
+      final pct = diesActivos > 0 ? (_unidadesDefecto / diesActivos * 100) : 0;
+      if (pct <= 10) {
+        OsatToast.show(
+          context,
+          message:
+              'Solo puedes rechazar la etapa si el scrap supera el 10% de los dies activos.',
+          tipo: ToastTipo.warning,
+        );
+        return;
+      }
     }
 
-    setState(() => _guardando = true);
     final loteProv = context.read<LoteProvider>();
-    final ok = await loteProv.completarEtapa(
-      resultado: _resultado,
-      unidadesDefecto: _unidadesDefecto,
-      observaciones: _obsCtrl.text.trim().isEmpty ? null : _obsCtrl.text.trim(),
-      defectos: _defectos,
-    );
-    setState(() => _guardando = false);
+    bool ok = false;
 
+    setState(() => _guardando = true);
+
+    if (_resultado == 'enhol') {
+      ok = await loteProv.ponerEnHold(
+        _obsCtrl.text.trim(),
+      );
+
+    } else {
+      ok = await loteProv.completarEtapa(
+        resultado: _resultado,
+        unidadesDefecto: _unidadesDefecto,
+        observaciones: _obsCtrl.text.trim().isEmpty
+            ? null
+            : _obsCtrl.text.trim(),
+        defectos: _defectos,
+      );
+
+    }
+
+    setState(() => _guardando = false);
     if (!mounted) return;
     if (ok) {
-      Navigator.of(context).pop();
-      OsatToast.show(context,
-          message: 'Etapa completada exitosamente!', tipo: ToastTipo.success);
+      Navigator.pop(context);
+      OsatToast.show(
+        context,
+        message: 'Etapa completada exitosamente.',
+        tipo: ToastTipo.success,
+      );
+
     } else {
-      OsatToast.show(context,
-          message: loteProv.error ?? 'Error al guardar. Intenta de nuevo.',
-          tipo: ToastTipo.error,
-          actionLabel: 'Reintentar',
-          onAction: _guardar);
+      OsatToast.show(
+        context,
+        message: loteProv.error ?? 'Error al guardar.',
+        tipo: ToastTipo.error,
+        actionLabel: 'Reintentar',
+        onAction: _guardar,
+      );
     }
   }
 
@@ -117,15 +144,30 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
     final lote = loteProv.loteActual;
     final etapa = lote?.etapaActual;
 
-    if (lote == null || etapa == null) {
+    if (lote == null || etapa == null || lote.enHold || lote.rechazado) {
       return Scaffold(
         backgroundColor: AppColors.bgApp,
         appBar: AppBar(backgroundColor: AppColors.bgApp),
-        body: const Center(
-          child: Text('No hay una etapa en curso.',
-              style: TextStyle(color: Colors.white)),
+        body: Center(
+          child: Text(
+            lote?.enHold == true
+                ? 'Este lote está en Hold. No es posible registrar etapas.'
+                : lote?.rechazado == true
+                    ? 'Este lote fue rechazado. Ya no puede continuar con más etapas.'
+                    : 'No hay una etapa en curso.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       );
+    }
+
+    final habilitarRechazo =
+        lote.diesActivos > 0 && (_unidadesDefecto / lote.diesActivos * 100) > 10;
+    if (_resultado == 'nocom' && !habilitarRechazo) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _resultado = 'compl');
+      });
     }
 
     return Scaffold(
@@ -210,27 +252,36 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                             _ResultadoOption(
                               label: 'Aprobado',
                               color: AppColors.green,
-                              selected: _resultado == 'aprobado',
+                              selected: _resultado == 'compl',
                               onTap: () =>
-                                  setState(() => _resultado = 'aprobado'),
+                                  setState(() => _resultado = 'compl'),
                             ),
                             const SizedBox(width: 8),
                             _ResultadoOption(
                               label: 'Rechazado',
                               color: AppColors.red,
-                              selected: _resultado == 'rechazado',
+                              selected: _resultado == 'nocom',
+                              habilitado: habilitarRechazo,
                               onTap: () =>
-                                  setState(() => _resultado = 'rechazado'),
+                                  setState(() => _resultado = 'nocom'),
                             ),
                             const SizedBox(width: 8),
                             _ResultadoOption(
                               label: 'Hold',
                               color: AppColors.gold,
-                              selected: _resultado == 'hold',
+                              selected: _resultado == 'enhol',
                               onTap: () =>
-                                  setState(() => _resultado = 'hold'),
+                                  setState(() => _resultado = 'enhol'),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '"Rechazado" se habilita cuando el scrap de esta etapa '
+                          'supera el 10% de los dies activos '
+                          '(${(lote.diesActivos * 0.10).floor()} unidades).',
+                          style: const TextStyle(
+                              fontSize: 11, color: AppColors.textMuted),
                         ),
                         const SizedBox(height: 18),
                         const Text('Unidades con defecto',
@@ -366,7 +417,7 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                   child: ElevatedButton(
                     onPressed: _guardando ? null : _guardar,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _resultado == 'hold'
+                      backgroundColor: _resultado == 'enhol'
                           ? AppColors.gold
                           : AppColors.green,
                       foregroundColor: Colors.white,
@@ -382,7 +433,7 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                                 color: Colors.white, strokeWidth: 2.4),
                           )
                         : Text(
-                            _resultado == 'hold'
+                            _resultado == 'enhol'
                                 ? 'Enviar a Hold'
                                 : 'Completar etapa',
                             style: const TextStyle(
@@ -404,26 +455,35 @@ class _ResultadoOption extends StatelessWidget {
   final Color color;
   final bool selected;
   final VoidCallback onTap;
+  final bool habilitado;
 
   const _ResultadoOption({
     required this.label,
     required this.color,
     required this.selected,
     required this.onTap,
+    this.habilitado = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: InkWell(
-        onTap: onTap,
+        onTap: habilitado ? onTap : null,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? color.withOpacity(0.1) : Colors.white,
+            color: !habilitado
+                ? const Color(0xFFF7FAFC)
+                : selected
+                    ? color.withValues(alpha: 0.1)
+                    : Colors.white,
             border: Border.all(
-                color: selected ? color : AppColors.borderCard, width: 1.5),
+                color: selected && habilitado
+                    ? color
+                    : AppColors.borderCard,
+                width: 1.5),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Center(
@@ -432,7 +492,11 @@ class _ResultadoOption extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? color : AppColors.textMuted,
+                color: !habilitado
+                    ? const Color(0xFFA0AEC0)
+                    : selected
+                        ? color
+                        : AppColors.textMuted,
               ),
             ),
           ),
@@ -509,7 +573,7 @@ class _AgregarDefectoSheetState extends State<_AgregarDefectoSheet> {
               style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
           const SizedBox(height: 6),
           DropdownButtonFormField<Defecto>(
-            value: _seleccionado,
+            initialValue: _seleccionado,
             isExpanded: true,
             decoration: InputDecoration(
               filled: true,
@@ -557,7 +621,7 @@ class _AgregarDefectoSheetState extends State<_AgregarDefectoSheet> {
                 label: Text(accionDefectoLabel(a)),
                 selected: selected,
                 onSelected: (_) => setState(() => _accion = a),
-                selectedColor: AppColors.purple.withOpacity(0.15),
+                selectedColor: AppColors.purple.withValues(alpha: 0.15),
                 labelStyle: TextStyle(
                   color: selected ? AppColors.purple : AppColors.textMuted,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.normal,

@@ -55,6 +55,46 @@ class LoteHeaderCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+          if (lote.enHold) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.badgeYellowBg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                lote.holdMotivo?.isNotEmpty == true
+                    ? 'Lote en Hold: ${lote.holdMotivo}'
+                    : 'Lote en Hold. El avance está bloqueado.',
+                style: const TextStyle(
+                  color: AppColors.badgeYellowText,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          if (lote.rechazado) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.badgeRedBg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Lote rechazado: hubo scrap de más. No puede continuar con más etapas.',
+                style: TextStyle(
+                  color: AppColors.badgeRedText,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

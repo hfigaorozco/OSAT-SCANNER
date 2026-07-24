@@ -2,14 +2,19 @@ enum EstadoEtapa { aprobado, enCurso, pendiente, hold, rechazado }
 
 EstadoEtapa estadoEtapaFromString(String? raw) {
   final s = (raw ?? '').toLowerCase();
+  // El orden importa: "No Completado" (nocom) contiene "completado" como
+  // substring, así que el chequeo de rechazado debe ir antes que el de
+  // aprobado o toda etapa rechazada se mostraría como aprobada.
+  if (s.contains('enhol') || s.contains('hold')) return EstadoEtapa.hold;
+  if (s.contains('nocom') || s.contains('no complet') || s.contains('rechaz')) {
+    return EstadoEtapa.rechazado;
+  }
   if (s.contains('aprob') || s.contains('complet') || s.contains('compl')) {
     return EstadoEtapa.aprobado;
   }
   if (s.contains('curso') || s.contains('proceso') || s.contains('activo')) {
     return EstadoEtapa.enCurso;
   }
-  if (s.contains('hold')) return EstadoEtapa.hold;
-  if (s.contains('rechaz') || s.contains('nocom')) return EstadoEtapa.rechazado;
   return EstadoEtapa.pendiente;
 }
 

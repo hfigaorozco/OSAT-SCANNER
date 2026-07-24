@@ -4,11 +4,13 @@ enum EstadoLote { enProceso, aprobado, rechazado, hold, pendiente }
 
 EstadoLote estadoLoteFromString(String? raw) {
   final s = (raw ?? '').toLowerCase();
-  if (s.contains('hold')) return EstadoLote.hold;
+  // "recha" (código backend de Rechazada) no contiene "rechaz", por eso
+  // el chequeo va antes y usa el prefijo corto para calzar con ambos.
+  if (s.contains('enhol') || s.contains('hold')) return EstadoLote.hold;
+  if (s.contains('recha')) return EstadoLote.rechazado;
   if (s.contains('aprob') || s.contains('complet') || s.contains('termi')) {
     return EstadoLote.aprobado;
   }
-  if (s.contains('rechaz') || s.contains('nocom')) return EstadoLote.rechazado;
   if (s.contains('proceso') || s.contains('activo') || s.contains('proce')) {
     return EstadoLote.enProceso;
   }
@@ -75,6 +77,14 @@ class Lote {
 
   bool get enHold => estado == EstadoLote.hold;
 
+  /// Un lote rechazado quedó fuera de línea: hubo scrap de más y no puede
+  /// seguir avanzando por más etapas.
+  bool get rechazado => estado == EstadoLote.rechazado;
+
+  bool get puedeCompletarEtapa =>
+      !enHold && !rechazado && etapaActual != null;
+  bool get puedePonerEnHold => !enHold && !rechazado && etapaActual != null;
+
   factory Lote.fromJson(Map<String, dynamic> json) {
     final etapasJson = (json['etapas'] as List?) ?? [];
     final etapas = <Etapa>[];
@@ -102,7 +112,10 @@ class Lote {
         codigoPaso: e['codigo']?.toString() ?? 'P$i',
         nombre: e['nombre'] ?? 'Paso ${i + 1}',
         orden: i + 1,
-        estado: estadoEtapaFromString(e['estado']),
+        
+        estado: estadoEtapaFromString(
+          e['estado_paso']?.toString() ?? e['estado']?.toString(),
+        ),
         operador: e['operador'],
         maquina: e['maquina'],
         horaInicioIso: e['hora_inicio'],
@@ -124,7 +137,9 @@ class Lote {
       ordenFolio:
           'ORD-${(json['orden'] ?? '').toString().padLeft(4, '0')}',
       proceso: json['proceso']?.toString() ?? '—',
-      estado: estadoLoteFromString(json['estado']?.toString()),
+      estado: estadoLoteFromString(
+        json['estado_oblea']?.toString() ?? json['estado']?.toString(),
+      ),
       diesIniciales: json['diesGenerados'] ?? 0,
       diesActivos: json['dies_activos'] ?? json['diesGenerados'] ?? 0,
       scrap: json['scrap'] ?? 0,

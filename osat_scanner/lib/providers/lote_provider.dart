@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/lote.dart';
 import '../models/defecto.dart';
+import '../models/lote_resumen.dart';
 import '../services/lote_service.dart';
 import '../services/api_client.dart';
+import '../services/recientes_service.dart';
 
 class LoteProvider extends ChangeNotifier {
   Lote? _loteActual;
@@ -13,6 +15,8 @@ class LoteProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   bool get tieneEtapaEnCurso => _loteActual?.etapaActual != null;
+  bool get puedeCompletarEtapa => _loteActual?.puedeCompletarEtapa ?? false;
+  bool get puedePonerEnHold => _loteActual?.puedePonerEnHold ?? false;
 
   Future<bool> buscarLote(String codigo) async {
     _loading = true;
@@ -21,6 +25,7 @@ class LoteProvider extends ChangeNotifier {
 
     try {
       _loteActual = await LoteService.buscarPorFolio(codigo);
+      await RecientesService.agregar(LoteResumen.fromLote(_loteActual!));
       _loading = false;
       notifyListeners();
       return true;
@@ -45,6 +50,16 @@ class LoteProvider extends ChangeNotifier {
     List<DefectoRegistrado> defectos = const [],
   }) async {
     if (_loteActual == null) return false;
+    if (_loteActual!.enHold) {
+      _error = 'Este lote está en Hold. Contacta al supervisor para continuar.';
+      notifyListeners();
+      return false;
+    }
+    if (_loteActual!.rechazado) {
+      _error = 'Este lote fue rechazado y ya no puede continuar con más etapas.';
+      notifyListeners();
+      return false;
+    }
     final etapa = _loteActual!.etapaActual;
     if (etapa == null) {
       _error = 'No hay etapa en curso.';
@@ -67,6 +82,12 @@ class LoteProvider extends ChangeNotifier {
       );
       // Refrescar el lote para reflejar el nuevo estado de las etapas
       _loteActual = await LoteService.buscarPorFolio(_loteActual!.folio);
+      // Si esa era la última etapa, cerramos el lote (ver comentario en
+      // LoteService.finalizarSiCorresponde) y volvemos a refrescar para
+      // que la UI muestre el badge Terminado/Rechazado de inmediato.
+      if (await LoteService.finalizarSiCorresponde(_loteActual!)) {
+        _loteActual = await LoteService.buscarPorFolio(_loteActual!.folio);
+      }
       _loading = false;
       notifyListeners();
       return true;
@@ -85,6 +106,11 @@ class LoteProvider extends ChangeNotifier {
 
   Future<bool> ponerEnHold(String motivo) async {
     if (_loteActual == null) return false;
+    if (_loteActual!.enHold) {
+      _error = 'Este lote ya está en Hold.';
+      notifyListeners();
+      return false;
+    }
     _loading = true;
     _error = null;
     notifyListeners();

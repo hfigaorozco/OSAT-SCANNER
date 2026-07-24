@@ -3,12 +3,10 @@ import 'package:provider/provider.dart';
 import '../models/alerta_operador.dart';
 import '../services/alerta_service.dart';
 import '../providers/auth_provider.dart';
-import '../providers/lote_provider.dart';
 import '../utils/constants.dart';
 import '../widgets/osat_bottom_nav.dart';
 import 'home_screen.dart';
 import 'scanner_screen.dart';
-import 'perfil_screen.dart';
 
 class AlertasScreen extends StatefulWidget {
   const AlertasScreen({super.key});
@@ -68,9 +66,6 @@ class _AlertasScreenState extends State<AlertasScreen> {
       case 1:
         destino = const ScannerScreen();
         break;
-      case 3:
-        destino = const PerfilScreen();
-        break;
       default:
         return;
     }
@@ -97,9 +92,6 @@ class _AlertasScreenState extends State<AlertasScreen> {
                     fontSize: 18,
                     fontWeight: FontWeight.bold),
               ),
-              Text('Turno ${auth.empleado?.turno ?? 'Hora-Hora'}',
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 12.5)),
               const SizedBox(height: 14),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -277,7 +269,7 @@ class _AlertaListItem extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: _color.withOpacity(0.12),
+                color: _color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(_icono, size: 18, color: _color),
