@@ -67,6 +67,13 @@ class AuthService {
     return token != null;
   }
 
+  /// Username guardado en el último login, usado para repoblar el perfil
+  /// al restaurar sesión (splash / reanudar app).
+  static Future<String?> getSavedUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_usernameKey);
+  }
+
   /// RFM01 — si la app lleva +30 min en background, se solicita re-autenticación.
   static Future<void> touchActivity() => _touchActivity();
 

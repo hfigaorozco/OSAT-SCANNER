@@ -21,6 +21,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _decidir() async {
     await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
     final auth = context.read<AuthProvider>();
     final restored = await auth.tryRestoreSession();
     if (!mounted) return;

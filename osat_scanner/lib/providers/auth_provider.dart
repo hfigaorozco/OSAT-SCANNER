@@ -54,24 +54,40 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
 
-    // Intentamos recuperar el username guardado para repoblar el perfil
+    // Recuperamos el username guardado en el último login para repoblar
+    // el perfil real del operador (nombre, rol, etc.) en vez de dejar un
+    // placeholder genérico cada vez que se reabre la app.
+    final username = await AuthService.getSavedUsername();
     try {
-      // Si no se puede recuperar el perfil, igual deja la sesión activa
-      // con datos mínimos — se completará en el primer fetch.
+      _empleado = username != null
+          ? await AuthService.getPerfil(username)
+          : Empleado(
+              numero: 0,
+              nombre: 'Operador',
+              primerApell: '',
+              seguApell: '',
+              username: '',
+              email: '',
+              rol: 'Operador',
+              estado: 'Activo',
+            );
+      notifyListeners();
+      return true;
+    } catch (_) {
+      // Si falla el fetch del perfil, igual dejamos la sesión activa
+      // con datos mínimos para no forzar un re-login innecesario.
       _empleado = Empleado(
         numero: 0,
-        nombre: 'Operador',
+        nombre: username ?? 'Operador',
         primerApell: '',
         seguApell: '',
-        username: '',
+        username: username ?? '',
         email: '',
         rol: 'Operador',
         estado: 'Activo',
       );
       notifyListeners();
       return true;
-    } catch (_) {
-      return false;
     }
   }
 

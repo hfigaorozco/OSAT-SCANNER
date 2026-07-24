@@ -45,12 +45,6 @@ class OsatBottomNav extends StatelessWidget {
               onTap: () => onTap(2),
               badgeCount: alertasNoLeidas,
             ),
-            _NavItem(
-              icon: Icons.person_rounded,
-              label: 'Perfil',
-              selected: currentIndex == 3,
-              onTap: () => onTap(3),
-            ),
           ],
         ),
       ),

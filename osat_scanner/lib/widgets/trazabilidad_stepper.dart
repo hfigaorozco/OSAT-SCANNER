@@ -23,6 +23,13 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
   Timer? _timer;
   int _tick = 0;
 
+  // El backend no persiste la hora de inicio de la etapa "en_curso" (el
+  // Paso_Realizado todavía no existe, igual que en la web — ver
+  // lote_detalle.html). Por eso anclamos localmente la primera vez que
+  // vemos cada etapa activa, para que el % avance de forma estable en
+  // vez de quedarse fijo en 0.
+  final Map<String, DateTime> _inicioLocal = {};
+
   @override
   void initState() {
     super.initState();
@@ -38,43 +45,39 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
     super.dispose();
   }
 
+  DateTime? _horaInicio(Etapa etapa) {
+    if (etapa.horaInicioIso != null && etapa.horaInicioIso!.isNotEmpty) {
+      try {
+        final parts = etapa.horaInicioIso!.split(':');
+        final now = DateTime.now();
+        return DateTime(now.year, now.month, now.day, int.parse(parts[0]),
+            int.parse(parts[1]), int.parse(parts.length > 2 ? parts[2] : '0'));
+      } catch (_) {
+        // sigue al fallback local
+      }
+    }
+    final key = '${widget.lote.numero}_${etapa.codigoPaso}';
+    return _inicioLocal.putIfAbsent(key, () => DateTime.now());
+  }
+
   double _calcularPorcentaje(Etapa etapa) {
     final estimado = etapa.tiempoEstimadoSeg;
     if (estimado == null || estimado <= 0) return 0;
-    if (etapa.horaInicioIso == null || etapa.horaInicioIso!.isEmpty) return 0;
-
-    try {
-      final parts = etapa.horaInicioIso!.split(':');
-      final now = DateTime.now();
-      final inicio = DateTime(now.year, now.month, now.day,
-          int.parse(parts[0]), int.parse(parts[1]),
-          int.parse(parts.length > 2 ? parts[2] : '0'));
-      final elapsed = now.difference(inicio).inSeconds;
-      return (elapsed / estimado).clamp(0.0, 1.0);
-    } catch (_) {
-      return 0;
-    }
+    final inicio = _horaInicio(etapa);
+    if (inicio == null) return 0;
+    final elapsed = DateTime.now().difference(inicio).inSeconds;
+    return (elapsed / estimado).clamp(0.0, 1.0);
   }
 
   String _formatElapsed(Etapa etapa) {
-    if (etapa.horaInicioIso == null || etapa.horaInicioIso!.isEmpty) {
-      return '00:00';
-    }
-    try {
-      final parts = etapa.horaInicioIso!.split(':');
-      final now = DateTime.now();
-      final inicio = DateTime(now.year, now.month, now.day,
-          int.parse(parts[0]), int.parse(parts[1]),
-          int.parse(parts.length > 2 ? parts[2] : '0'));
-      final elapsed = now.difference(inicio).inSeconds;
-      final h = elapsed ~/ 3600;
-      final m = (elapsed % 3600) ~/ 60;
-      final s = elapsed % 60;
-      if (h > 0) return '${h}h ${m.toString().padLeft(2, '0')}m';
-      return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '00:00';
-    }
+    final inicio = _horaInicio(etapa);
+    if (inicio == null) return '00:00';
+    final elapsed = DateTime.now().difference(inicio).inSeconds;
+    final h = elapsed ~/ 3600;
+    final m = (elapsed % 3600) ~/ 60;
+    final s = elapsed % 60;
+    if (h > 0) return '${h}h ${m.toString().padLeft(2, '0')}m';
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   Color _barColor(double pct) {

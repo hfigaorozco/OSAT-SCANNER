@@ -14,7 +14,6 @@ class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
 
   void _onNavTap(BuildContext context, int index) {
-    if (index == 3) return;
     Widget destino;
     switch (index) {
       case 0:
@@ -117,7 +116,7 @@ class PerfilScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.green.withOpacity(0.15),
+                  color: AppColors.green.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -142,37 +141,10 @@ class PerfilScreen extends StatelessWidget {
                       value: empleado?.email ?? '—'),
                   const Divider(height: 1),
                   _InfoRow(
-                      icon: Icons.schedule_outlined,
-                      label: 'Turno activo',
-                      value: empleado?.turno ?? 'Hora-Hora'),
-                  const Divider(height: 1),
-                  _InfoRow(
                       icon: Icons.toggle_on_outlined,
                       label: 'Estado',
                       value: empleado?.estado ?? '—'),
                 ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.badgeBlueBg,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline,
-                        size: 16, color: AppColors.turquoise),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Para modificar tu información, contacta a tu administrador desde la plataforma web.',
-                        style: TextStyle(
-                            fontSize: 11.5, color: AppColors.badgeBlueText),
-                      ),
-                    ),
-                  ],
-                ),
               ),
               const Spacer(),
               SizedBox(
@@ -194,7 +166,7 @@ class PerfilScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: OsatBottomNav(
-        currentIndex: 3,
+        currentIndex: -1,
         onTap: (i) => _onNavTap(context, i),
       ),
     );

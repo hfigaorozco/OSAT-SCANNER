@@ -41,14 +41,19 @@ class AlertaOperador {
     this.lotePk,
   });
 
-  factory AlertaOperador.fromJson(Map<String, dynamic> json) {
+  /// El endpoint /v1/list/alertas/ del backend solo expone hoy
+  /// 'descripcion' y 'estadoAlerta' (no pk, tipo, ni lote asociado), así
+  /// que 'leida' se aproxima con estadoAlerta ('resue' = resuelta) y el
+  /// id usa el índice de la lista mientras el backend no exponga el pk.
+  factory AlertaOperador.fromJson(Map<String, dynamic> json, {int indice = 0}) {
+    final estadoAlerta = json['estadoAlerta']?.toString().toLowerCase() ?? '';
     return AlertaOperador(
-      id: json['pk'] ?? json['numero'] ?? 0,
+      id: json['pk'] ?? json['numero'] ?? indice,
       tipo: tipoAlertaFromString(json['tipo']),
       titulo: json['titulo'] ?? json['descripcion'] ?? '',
       cuerpo: json['cuerpo'] ?? json['descripcion'] ?? '',
       tiempo: json['tiempo'] ?? '—',
-      leida: json['leida'] ?? false,
+      leida: json['leida'] ?? estadoAlerta.contains('resue'),
       loteFolio: json['lote_folio'],
       lotePk: json['lote_pk'],
     );
