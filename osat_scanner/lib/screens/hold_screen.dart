@@ -32,9 +32,9 @@ class _HoldScreenState extends State<HoldScreen> {
     setState(() => _enviando = true);
     final loteProv = context.read<LoteProvider>();
     final ok = await loteProv.ponerEnHold(motivo);
+    if (!mounted) return;
     setState(() => _enviando = false);
 
-    if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop();
       OsatToast.show(context,

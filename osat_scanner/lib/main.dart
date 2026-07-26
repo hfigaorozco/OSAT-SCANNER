@@ -4,8 +4,9 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/lote_provider.dart';
 import 'utils/constants.dart';
+import 'utils/navigation.dart';
 import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
+import 'screens/lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ class OsatTracerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LoteProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: rootNavigatorKey,
         title: 'OSAT Tracer',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -36,7 +38,9 @@ class OsatTracerApp extends StatelessWidget {
           ),
           fontFamily: 'Roboto',
         ),
-        home: const _AppLifecycleWrapper(child: SplashScreen()),
+        builder: (context, child) =>
+            _AppLifecycleWrapper(child: child ?? const SizedBox.shrink()),
+        home: const SplashScreen(),
       ),
     );
   }
@@ -108,23 +112,22 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
     if (state == AppLifecycleState.paused) {
       auth.touchActivity();
     } else if (state == AppLifecycleState.resumed && auth.isLoggedIn) {
-      _checkInactivity();
-    }
-  }
-
-  Future<void> _checkInactivity() async {
-    final auth = context.read<AuthProvider>();
-    final stillValid = await auth.tryRestoreSession();
-    if (!stillValid && mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
+      // RFM01 — +30 min en segundo plano: se bloquea localmente la app y se
+      // pide confirmar identidad, sin invalidar el token en el servidor.
+      auth.checkInactivityLock();
     }
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    return Stack(
+      children: [
+        widget.child,
+        if (auth.isLoggedIn && auth.isLocked) const LockScreen(),
+      ],
+    );
+  }
 }
 
 /// Helper global para saber si el dispositivo es tablet

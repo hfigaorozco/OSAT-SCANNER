@@ -31,12 +31,14 @@ class _AlertasScreenState extends State<AlertasScreen> {
     setState(() => _loading = true);
     try {
       final lista = await AlertaService.listar();
+      if (!mounted) return;
       setState(() {
         _alertas = lista;
         _loading = false;
         if (_alertas.isNotEmpty) _seleccionada = _alertas.first;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }

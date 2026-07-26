@@ -2,10 +2,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/empleado.dart';
 import '../utils/constants.dart';
 import 'api_client.dart';
+import 'recientes_service.dart';
 
 class AuthService {
   static const _usernameKey = 'osat_username';
   static const _lastActivityKey = 'osat_last_activity';
+
+  /// RFM01 — Tiempo en segundo plano tras el cual se pide confirmar
+  /// identidad de nuevo. Para hacer una demo en vivo, baja este valor
+  /// temporalmente (ej. Duration(seconds: 10)) y luego regrésalo a 30 min.
+  static const Duration inactivityTimeout = Duration(minutes: 30);
 
   /// RFM01 — Login con usuario empresarial y contraseña.
   /// Devuelve el Empleado autenticado y guarda el token.
@@ -57,6 +63,7 @@ class AuthService {
       // Si falla la llamada al server, igual limpiamos localmente
     }
     await ApiClient.clearToken();
+    await RecientesService.limpiar();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_usernameKey);
     await prefs.remove(_lastActivityKey);
@@ -88,7 +95,7 @@ class AuthService {
     final last = prefs.getInt(_lastActivityKey);
     if (last == null) return false;
     final diff = DateTime.now().millisecondsSinceEpoch - last;
-    return diff > const Duration(minutes: 30).inMilliseconds;
+    return diff > inactivityTimeout.inMilliseconds;
   }
 
   /// RFM03 — Consultar datos de perfil (solo lectura).

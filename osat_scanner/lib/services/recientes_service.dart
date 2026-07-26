@@ -37,4 +37,12 @@ class RecientesService {
       recortados.map((l) => jsonEncode(l.toJson())).toList(),
     );
   }
+
+  /// El dispositivo suele compartirse entre operadores por turno — al cerrar
+  /// sesión se borra el historial para que el siguiente operador no vea los
+  /// lotes que revisó el anterior.
+  static Future<void> limpiar() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_key);
+  }
 }

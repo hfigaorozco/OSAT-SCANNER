@@ -31,7 +31,7 @@ class LoteService {
   static Future<void> registrarEtapa({
     required Lote lote,
     required String codigoPaso,
-    required String resultado, // 'aprobado' | 'rechazado' | 'hold'
+    required String resultado, // 'compl' | 'nocom' — códigos de Estado_Paso
     required int unidadesDefecto,
     String? observaciones,
     List<DefectoRegistrado> defectos = const [],
