@@ -111,6 +111,16 @@ class LoteProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    if (_loteActual!.rechazado) {
+      _error = 'Este lote fue rechazado y ya no puede continuar con más etapas.';
+      notifyListeners();
+      return false;
+    }
+    if (_loteActual!.etapaActual == null) {
+      _error = 'Este lote ya no tiene una etapa en curso.';
+      notifyListeners();
+      return false;
+    }
     _loading = true;
     _error = null;
     notifyListeners();

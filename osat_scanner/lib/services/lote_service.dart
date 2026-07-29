@@ -72,6 +72,16 @@ class LoteService {
     if (lote.enHold) {
       throw ApiException('Este lote ya está en Hold.');
     }
+    if (lote.rechazado) {
+      throw ApiException(
+          'Este lote fue rechazado y ya no puede continuar con más etapas.');
+    }
+    if (lote.etapaActual == null) {
+      throw ApiException('Este lote ya no tiene una etapa en curso.');
+    }
+    if (motivo.trim().isEmpty) {
+      throw ApiException('Indica el motivo del hold.');
+    }
     await ApiClient.patch(ApiConfig.updateOblea(lote.numero), {
       'estado': 'enhol',
       'hold_motivo': motivo,
