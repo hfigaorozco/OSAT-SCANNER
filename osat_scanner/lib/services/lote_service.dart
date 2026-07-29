@@ -130,9 +130,26 @@ class LoteService {
     return resultados;
   }
 
-  /// Catálogo de defectos para el formulario de RFM06
-  static Future<List<Defecto>> listarDefectos() async {
-    final data = await ApiClient.get(ApiConfig.defectos);
-    return (data as List).map((d) => Defecto.fromJson(d)).toList();
+  /// Catálogo de defectos para el formulario de RFM06, filtrado a solo los
+  /// defectos ligados al paso que se está completando (un paso puede tener
+  /// varios defectos posibles, un defecto puede aparecer en varios pasos).
+  static Future<List<Defecto>> listarDefectosPorPaso(String codigoPaso) async {
+    final defectosData = await ApiClient.get(ApiConfig.defectos);
+    final relacionesData = await ApiClient.get(ApiConfig.pasoDefectos);
+
+    final defectos = (defectosData as List).cast<Map<String, dynamic>>();
+    final relaciones = (relacionesData as List).cast<Map<String, dynamic>>();
+
+    final codigosLigados = relaciones
+        .where((r) => r['paso']?.toString() == codigoPaso)
+        .map((r) => r['defecto']?.toString())
+        .toSet();
+
+    return defectos
+        .where((d) =>
+            codigosLigados.contains(d['codigo']?.toString()) &&
+            (d['activo'] ?? true) == true)
+        .map((d) => Defecto.fromJson(d))
+        .toList();
   }
 }

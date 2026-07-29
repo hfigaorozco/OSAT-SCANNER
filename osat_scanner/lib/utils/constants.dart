@@ -49,6 +49,7 @@ class ApiConfig {
   static const String pasosRealizados = '$baseUrl/v1/list/PasoRealizado/';
   static const String crearPasoRealizado = '$baseUrl/v1/create/PasoRealizado/';
   static const String defectos = '$baseUrl/v1/list/Defecto/';
+  static const String pasoDefectos = '$baseUrl/v1/list/PasoDefecto/';
   // OJO: 'historiales_alertas' es la tabla puente de KPI (Registro_Kpi<->Alerta)
   // y no trae 'descripcion'; las alertas del operador (hold, rechazos, etc.)
   // viven en 'alertas'.

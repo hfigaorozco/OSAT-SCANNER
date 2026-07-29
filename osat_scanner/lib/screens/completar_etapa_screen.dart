@@ -33,8 +33,14 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
   }
 
   Future<void> _cargarCatalogo() async {
+    final codigoPaso =
+        context.read<LoteProvider>().loteActual?.etapaActual?.codigoPaso;
+    if (codigoPaso == null) {
+      setState(() => _cargandoCatalogo = false);
+      return;
+    }
     try {
-      final lista = await LoteService.listarDefectos();
+      final lista = await LoteService.listarDefectosPorPaso(codigoPaso);
       setState(() {
         _catalogoDefectos = lista;
         _cargandoCatalogo = false;
@@ -61,7 +67,7 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
   void _agregarDefecto() {
     if (_catalogoDefectos.isEmpty) {
       OsatToast.show(context,
-          message: 'No hay catálogo de defectos disponible.',
+          message: 'Este paso no tiene defectos configurados.',
           tipo: ToastTipo.warning);
       return;
     }
