@@ -7,11 +7,20 @@ class AuthProvider extends ChangeNotifier {
   Empleado? _empleado;
   bool _loading = false;
   String? _error;
+  bool _locked = false;
+  String? _lockError;
+  bool _confirmandoIdentidad = false;
 
   Empleado? get empleado => _empleado;
   bool get isLoggedIn => _empleado != null;
   bool get loading => _loading;
   String? get error => _error;
+
+  /// RFM01 — la app estuvo +30 min en segundo plano: hay que confirmar la
+  /// identidad del operador antes de seguir, sin tocar el token del server.
+  bool get isLocked => _locked;
+  String? get lockError => _lockError;
+  bool get confirmandoIdentidad => _confirmandoIdentidad;
 
   Future<bool> login(String username, String password) async {
     _loading = true;
@@ -41,6 +50,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await AuthService.logout();
     _empleado = null;
+    _locked = false;
+    _lockError = null;
     notifyListeners();
   }
 
@@ -92,4 +103,46 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void touchActivity() => AuthService.touchActivity();
+
+  /// Se llama al volver del segundo plano. Si pasaron +30 min sin actividad,
+  /// bloquea la app localmente — el token sigue válido en el servidor, solo
+  /// se pide confirmar identidad antes de dejar seguir usándola.
+  Future<void> checkInactivityLock() async {
+    if (!isLoggedIn) return;
+    final expired = await AuthService.sessionExpiredByInactivity();
+    if (expired) {
+      _locked = true;
+      _lockError = null;
+      notifyListeners();
+    }
+  }
+
+  /// Confirmación de identidad local: valida la contraseña del operador ya
+  /// logueado contra el servidor, pero sin invalidar ni reemplazar la sesión
+  /// existente — solo desbloquea la app si la contraseña es correcta.
+  Future<bool> confirmIdentity(String password) async {
+    if (_empleado == null) return false;
+    _confirmandoIdentidad = true;
+    _lockError = null;
+    notifyListeners();
+
+    try {
+      await AuthService.login(_empleado!.username, password);
+      _locked = false;
+      _confirmandoIdentidad = false;
+      touchActivity();
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _lockError = e.message;
+      _confirmandoIdentidad = false;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _lockError = 'Error inesperado. Intenta de nuevo.';
+      _confirmandoIdentidad = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

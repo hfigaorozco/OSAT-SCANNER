@@ -41,11 +41,13 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
     }
     try {
       final lista = await LoteService.listarDefectosPorPaso(codigoPaso);
+      if (!mounted) return;
       setState(() {
         _catalogoDefectos = lista;
         _cargandoCatalogo = false;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() => _cargandoCatalogo = false);
     }
   }
@@ -123,8 +125,8 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
 
     }
 
-    setState(() => _guardando = false);
     if (!mounted) return;
+    setState(() => _guardando = false);
     if (ok) {
       Navigator.pop(context);
       OsatToast.show(
