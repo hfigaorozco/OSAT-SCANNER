@@ -140,7 +140,7 @@ class Lote {
       estado: estadoLoteFromString(
         json['estado_oblea']?.toString() ?? json['estado']?.toString(),
       ),
-      diesIniciales: json['diesGenerados'] ?? 0,
+      diesIniciales: json['dies_iniciales'] ?? json['diesGenerados'] ?? 0,
       diesActivos: json['dies_activos'] ?? json['diesGenerados'] ?? 0,
       scrap: json['scrap'] ?? 0,
       etapas: etapas,
