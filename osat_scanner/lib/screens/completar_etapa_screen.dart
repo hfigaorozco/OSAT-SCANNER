@@ -91,12 +91,19 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
     if (_resultado == 'nocom') {
       final lote = context.read<LoteProvider>().loteActual;
       final diesActivos = lote?.diesActivos ?? 0;
-      final pct = diesActivos > 0 ? (_unidadesDefecto / diesActivos * 100) : 0;
-      if (pct <= 10) {
+      final diesIniciales = lote?.diesIniciales ?? 0;
+      // Rechazar una etapa es una decisión sobre el yield GLOBAL del lote, no
+      // sobre el scrap de esta etapa sola: solo se permite si, al aplicar
+      // este scrap, el yield del lote completo cae por debajo del 95% — el
+      // mismo umbral que usa el trigger que pone la orden en hold.
+      final yieldDespues = diesIniciales > 0
+          ? ((diesActivos - _unidadesDefecto) / diesIniciales * 100)
+          : 0;
+      if (yieldDespues >= 95) {
         OsatToast.show(
           context,
           message:
-              'Solo puedes rechazar la etapa si el scrap supera el 10% de los dies activos.',
+              'Solo puedes rechazar la etapa si el scrap hace que el yield global del lote caiga por debajo del 95%.',
           tipo: ToastTipo.warning,
         );
         return;
@@ -170,8 +177,10 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
       );
     }
 
-    final habilitarRechazo =
-        lote.diesActivos > 0 && (_unidadesDefecto / lote.diesActivos * 100) > 10;
+    final yieldDespuesRechazo = lote.diesIniciales > 0
+        ? ((lote.diesActivos - _unidadesDefecto) / lote.diesIniciales * 100)
+        : 0;
+    final habilitarRechazo = yieldDespuesRechazo < 95;
     if (_resultado == 'nocom' && !habilitarRechazo) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _resultado = 'compl');
@@ -285,9 +294,9 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '"Rechazado" se habilita cuando el scrap de esta etapa '
-                          'supera el 10% de los dies activos '
-                          '(${(lote.diesActivos * 0.10).floor()} unidades).',
+                          '"Rechazado" se habilita cuando el yield global del '
+                          'lote caería por debajo del 95% '
+                          '(scrap mayor a ${(lote.diesActivos - 0.95 * lote.diesIniciales).clamp(0, double.infinity).floor()} unidades).',
                           style: const TextStyle(
                               fontSize: 11, color: AppColors.textMuted),
                         ),
