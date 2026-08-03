@@ -158,20 +158,24 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
     final loteProv = context.watch<LoteProvider>();
     final lote = loteProv.loteActual;
     final etapa = lote?.etapaActual;
+    final s = AppScale.of(context);
 
     if (lote == null || etapa == null || lote.enHold || lote.rechazado) {
       return Scaffold(
         backgroundColor: AppColors.bgApp,
         appBar: AppBar(backgroundColor: AppColors.bgApp),
         body: Center(
-          child: Text(
-            lote?.enHold == true
-                ? 'Este lote está en Hold. No es posible registrar etapas.'
-                : lote?.rechazado == true
-                    ? 'Este lote fue rechazado. Ya no puede continuar con más etapas.'
-                    : 'No hay una etapa en curso.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white),
+          child: Padding(
+            padding: EdgeInsets.all(s.sp(24)),
+            child: Text(
+              lote?.enHold == true
+                  ? 'Este lote está en Hold. No es posible registrar etapas.'
+                  : lote?.rechazado == true
+                      ? 'Este lote fue rechazado. Ya no puede continuar con más etapas.'
+                      : 'No hay una etapa en curso.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: s.f(14)),
+            ),
           ),
         ),
       );
@@ -192,18 +196,18 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
       body: SafeArea(
         child: Center(
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            constraints: const BoxConstraints(maxWidth: 480),
+            margin: EdgeInsets.symmetric(horizontal: s.sp(16)),
+            constraints: BoxConstraints(maxWidth: s.sp(480)),
             decoration: BoxDecoration(
               color: AppColors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(s.r(16)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Header
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 16, 0),
+                  padding: EdgeInsets.fromLTRB(s.sp(20), s.sp(18), s.sp(16), 0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -211,35 +215,37 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(etapa.nombre,
-                              style: const TextStyle(
-                                  fontSize: 18,
+                              style: TextStyle(
+                                  fontSize: s.f(18),
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.textDark)),
                           Text(lote.folio,
-                              style: const TextStyle(
-                                  fontSize: 12.5, color: AppColors.textMuted)),
+                              style: TextStyle(
+                                  fontSize: s.f(12.5),
+                                  color: AppColors.textMuted)),
                         ],
                       ),
                       StreamBuilder<int>(
                         stream: _timerStream,
                         builder: (context, _) {
                           return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: s.sp(10), vertical: s.sp(5)),
                             decoration: BoxDecoration(
                               color: AppColors.badgeYellowBg,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.access_time,
-                                    size: 13, color: AppColors.badgeYellowText),
-                                const SizedBox(width: 4),
+                                Icon(Icons.access_time,
+                                    size: s.ic(13),
+                                    color: AppColors.badgeYellowText),
+                                SizedBox(width: s.sp(4)),
                                 Text(
                                   _formatElapsed(
                                       _stopwatch.elapsed.inSeconds),
-                                  style: const TextStyle(
-                                      fontSize: 12,
+                                  style: TextStyle(
+                                      fontSize: s.f(12),
                                       color: AppColors.badgeYellowText,
                                       fontWeight: FontWeight.w600),
                                 ),
@@ -251,30 +257,32 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                     ],
                   ),
                 ),
-                const Divider(height: 20),
+                Divider(height: s.sp(20)),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: s.sp(20)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Resultado *',
+                        Text('Resultado *',
                             style: TextStyle(
-                                fontSize: 13,
+                                fontSize: s.f(13),
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textDark)),
-                        const SizedBox(height: 8),
+                        SizedBox(height: s.sp(8)),
                         Row(
                           children: [
                             _ResultadoOption(
+                              s: s,
                               label: 'Aprobado',
                               color: AppColors.green,
                               selected: _resultado == 'compl',
                               onTap: () =>
                                   setState(() => _resultado = 'compl'),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: s.sp(8)),
                             _ResultadoOption(
+                              s: s,
                               label: 'Rechazado',
                               color: AppColors.red,
                               selected: _resultado == 'nocom',
@@ -282,8 +290,9 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                               onTap: () =>
                                   setState(() => _resultado = 'nocom'),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: s.sp(8)),
                             _ResultadoOption(
+                              s: s,
                               label: 'Hold',
                               color: AppColors.gold,
                               selected: _resultado == 'enhol',
@@ -292,95 +301,98 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: s.sp(6)),
                         Text(
                           '"Rechazado" se habilita cuando el yield global del '
                           'lote caería por debajo del 95% '
                           '(scrap mayor a ${(lote.diesActivos - 0.95 * lote.diesIniciales).clamp(0, double.infinity).floor()} unidades).',
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.textMuted),
+                          style: TextStyle(
+                              fontSize: s.f(11), color: AppColors.textMuted),
                         ),
-                        const SizedBox(height: 18),
-                        const Text('Unidades con defecto',
+                        SizedBox(height: s.sp(18)),
+                        Text('Unidades con defecto',
                             style: TextStyle(
-                                fontSize: 13,
+                                fontSize: s.f(13),
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textDark)),
-                        const SizedBox(height: 8),
+                        SizedBox(height: s.sp(8)),
                         Row(
                           children: [
                             _StepperButton(
+                              s: s,
                               icon: Icons.remove,
                               onTap: () => setState(() {
                                 if (_unidadesDefecto > 0) _unidadesDefecto--;
                               }),
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: s.sp(10)),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 10),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: s.sp(24), vertical: s.sp(10)),
                               decoration: BoxDecoration(
                                 border:
                                     Border.all(color: AppColors.borderCard),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(s.r(8)),
                               ),
                               child: Text('$_unidadesDefecto',
-                                  style: const TextStyle(
-                                      fontSize: 16,
+                                  style: TextStyle(
+                                      fontSize: s.f(16),
                                       fontWeight: FontWeight.bold)),
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: s.sp(10)),
                             _StepperButton(
+                              s: s,
                               icon: Icons.add,
                               onTap: () =>
                                   setState(() => _unidadesDefecto++),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 18),
-                        const Text('Observaciones (opcional)',
+                        SizedBox(height: s.sp(18)),
+                        Text('Observaciones (opcional)',
                             style: TextStyle(
-                                fontSize: 13,
+                                fontSize: s.f(13),
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textDark)),
-                        const SizedBox(height: 8),
+                        SizedBox(height: s.sp(8)),
                         TextField(
                           controller: _obsCtrl,
                           maxLines: 3,
+                          style: TextStyle(fontSize: s.f(14)),
                           decoration: InputDecoration(
                             hintText: 'Escribe observaciones sobre esta etapa...',
-                            hintStyle: const TextStyle(
-                                fontSize: 13, color: AppColors.textMuted),
+                            hintStyle: TextStyle(
+                                fontSize: s.f(13), color: AppColors.textMuted),
                             filled: true,
                             fillColor: const Color(0xFFF7FAFC),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(s.r(8)),
                               borderSide: const BorderSide(
                                   color: AppColors.borderCard),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        SizedBox(height: s.sp(18)),
                         Text(
                           _defectos.isEmpty
                               ? 'Defectos detectados'
                               : 'Defectos detectados (${_defectos.fold(0, (s, d) => s + d.cantidad)} unidades)',
-                          style: const TextStyle(
-                              fontSize: 13,
+                          style: TextStyle(
+                              fontSize: s.f(13),
                               fontWeight: FontWeight.w600,
                               color: AppColors.textDark),
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: s.sp(8)),
                         ..._defectos.asMap().entries.map((entry) {
                           final i = entry.key;
                           final d = entry.value;
                           return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                            margin: EdgeInsets.only(bottom: s.sp(8)),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: s.sp(12), vertical: s.sp(10)),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF7FAFC),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(s.r(8)),
                               border:
                                   Border.all(color: AppColors.borderCard),
                             ),
@@ -392,21 +404,21 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(d.descripcion,
-                                          style: const TextStyle(
-                                              fontSize: 13,
+                                          style: TextStyle(
+                                              fontSize: s.f(13),
                                               fontWeight: FontWeight.w600)),
                                       Text(
                                         '${d.cantidad} unidades · ${accionDefectoLabel(d.accion)}',
-                                        style: const TextStyle(
-                                            fontSize: 11.5,
+                                        style: TextStyle(
+                                            fontSize: s.f(11.5),
                                             color: AppColors.textMuted),
                                       ),
                                     ],
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.close,
-                                      size: 18, color: AppColors.red),
+                                  icon: Icon(Icons.close,
+                                      size: s.ic(18), color: AppColors.red),
                                   onPressed: () =>
                                       setState(() => _defectos.removeAt(i)),
                                 ),
@@ -416,46 +428,50 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                         }),
                         OutlinedButton.icon(
                           onPressed: _cargandoCatalogo ? null : _agregarDefecto,
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Agregar defecto'),
+                          icon: Icon(Icons.add, size: s.ic(16)),
+                          label: Text('Agregar defecto',
+                              style: TextStyle(fontSize: s.f(14))),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.green,
                             side: const BorderSide(color: AppColors.green),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: s.sp(16)),
                       ],
                     ),
                   ),
                 ),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  child: ElevatedButton(
-                    onPressed: _guardando ? null : _guardar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _resultado == 'enhol'
-                          ? AppColors.gold
-                          : AppColors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                  padding: EdgeInsets.all(s.sp(16)),
+                  child: SizedBox(
+                    height: s.h(46),
+                    child: ElevatedButton(
+                      onPressed: _guardando ? null : _guardar,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _resultado == 'enhol'
+                            ? AppColors.gold
+                            : AppColors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(s.r(10))),
+                      ),
+                      child: _guardando
+                          ? SizedBox(
+                              width: s.ic(22),
+                              height: s.ic(22),
+                              child: const CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2.4),
+                            )
+                          : Text(
+                              _resultado == 'enhol'
+                                  ? 'Enviar a Hold'
+                                  : 'Completar etapa',
+                              style: TextStyle(
+                                  fontSize: s.f(15),
+                                  fontWeight: FontWeight.w600),
+                            ),
                     ),
-                    child: _guardando
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.4),
-                          )
-                        : Text(
-                            _resultado == 'enhol'
-                                ? 'Enviar a Hold'
-                                : 'Completar etapa',
-                            style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w600),
-                          ),
                   ),
                 ),
               ],
@@ -468,6 +484,7 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
 }
 
 class _ResultadoOption extends StatelessWidget {
+  final AppScale s;
   final String label;
   final Color color;
   final bool selected;
@@ -475,6 +492,7 @@ class _ResultadoOption extends StatelessWidget {
   final bool habilitado;
 
   const _ResultadoOption({
+    required this.s,
     required this.label,
     required this.color,
     required this.selected,
@@ -487,9 +505,9 @@ class _ResultadoOption extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: habilitado ? onTap : null,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(s.r(8)),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: EdgeInsets.symmetric(vertical: s.sp(12)),
           decoration: BoxDecoration(
             color: !habilitado
                 ? const Color(0xFFF7FAFC)
@@ -501,13 +519,13 @@ class _ResultadoOption extends StatelessWidget {
                     ? color
                     : AppColors.borderCard,
                 width: 1.5),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(s.r(8)),
           ),
           child: Center(
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: s.f(13),
                 fontWeight: FontWeight.w600,
                 color: !habilitado
                     ? const Color(0xFFA0AEC0)
@@ -524,23 +542,24 @@ class _ResultadoOption extends StatelessWidget {
 }
 
 class _StepperButton extends StatelessWidget {
+  final AppScale s;
   final IconData icon;
   final VoidCallback onTap;
-  const _StepperButton({required this.icon, required this.onTap});
+  const _StepperButton({required this.s, required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(s.r(8)),
       child: Container(
-        width: 40,
-        height: 40,
+        width: s.sp(40),
+        height: s.sp(40),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.borderCard),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(s.r(8)),
         ),
-        child: Icon(icon, size: 18, color: AppColors.textDark),
+        child: Icon(icon, size: s.ic(18), color: AppColors.textDark),
       ),
     );
   }
@@ -572,33 +591,35 @@ class _AgregarDefectoSheetState extends State<_AgregarDefectoSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppScale.of(context);
     return Padding(
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: s.sp(20),
+        right: s.sp(20),
+        top: s.sp(20),
+        bottom: MediaQuery.of(context).viewInsets.bottom + s.sp(20),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Agregar defecto',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          const Text('Tipo de defecto',
-              style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-          const SizedBox(height: 6),
+          Text('Agregar defecto',
+              style: TextStyle(fontSize: s.f(17), fontWeight: FontWeight.bold)),
+          SizedBox(height: s.sp(16)),
+          Text('Tipo de defecto',
+              style: TextStyle(fontSize: s.f(12.5), color: AppColors.textMuted)),
+          SizedBox(height: s.sp(6)),
           DropdownButtonFormField<Defecto>(
             initialValue: _seleccionado,
             isExpanded: true,
+            style: TextStyle(fontSize: s.f(14), color: AppColors.textDark),
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFFF7FAFC),
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  borderRadius: BorderRadius.circular(s.r(8))),
+              contentPadding: EdgeInsets.symmetric(
+                  horizontal: s.sp(12), vertical: s.sp(6)),
             ),
             items: widget.catalogo
                 .map((d) => DropdownMenuItem(
@@ -606,36 +627,38 @@ class _AgregarDefectoSheetState extends State<_AgregarDefectoSheet> {
                 .toList(),
             onChanged: (v) => setState(() => _seleccionado = v),
           ),
-          const SizedBox(height: 14),
-          const Text('Cantidad de unidades',
-              style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-          const SizedBox(height: 6),
+          SizedBox(height: s.sp(14)),
+          Text('Cantidad de unidades',
+              style: TextStyle(fontSize: s.f(12.5), color: AppColors.textMuted)),
+          SizedBox(height: s.sp(6)),
           Row(
             children: [
               _StepperButton(
+                s: s,
                 icon: Icons.remove,
                 onTap: () =>
                     setState(() => _cantidad = (_cantidad - 1).clamp(1, 999)),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: s.sp(10)),
               Text('$_cantidad',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(width: 10),
+                  style: TextStyle(
+                      fontSize: s.f(16), fontWeight: FontWeight.bold)),
+              SizedBox(width: s.sp(10)),
               _StepperButton(
-                  icon: Icons.add, onTap: () => setState(() => _cantidad++)),
+                  s: s, icon: Icons.add, onTap: () => setState(() => _cantidad++)),
             ],
           ),
-          const SizedBox(height: 14),
-          const Text('Acción tomada',
-              style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-          const SizedBox(height: 6),
+          SizedBox(height: s.sp(14)),
+          Text('Acción tomada',
+              style: TextStyle(fontSize: s.f(12.5), color: AppColors.textMuted)),
+          SizedBox(height: s.sp(6)),
           Wrap(
-            spacing: 8,
+            spacing: s.sp(8),
             children: AccionDefecto.values.map((a) {
               final selected = _accion == a;
               return ChoiceChip(
-                label: Text(accionDefectoLabel(a)),
+                label: Text(accionDefectoLabel(a),
+                    style: TextStyle(fontSize: s.f(13))),
                 selected: selected,
                 onSelected: (_) => setState(() => _accion = a),
                 selectedColor: AppColors.purple.withValues(alpha: 0.15),
@@ -646,20 +669,23 @@ class _AgregarDefectoSheetState extends State<_AgregarDefectoSheet> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: s.sp(14)),
           OutlinedButton.icon(
             onPressed: _tomarFoto,
             icon: Icon(_fotoPath == null
                 ? Icons.camera_alt_outlined
                 : Icons.check_circle,
+                size: s.ic(18),
                 color: _fotoPath == null ? null : AppColors.green),
             label: Text(_fotoPath == null
                 ? 'Tomar fotografía (opcional)'
-                : 'Foto capturada'),
+                : 'Foto capturada',
+                style: TextStyle(fontSize: s.f(14))),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: s.sp(20)),
           SizedBox(
             width: double.infinity,
+            height: s.h(44),
             child: ElevatedButton(
               onPressed: _seleccionado == null
                   ? null
@@ -676,9 +702,8 @@ class _AgregarDefectoSheetState extends State<_AgregarDefectoSheet> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.green,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 13),
               ),
-              child: const Text('Agregar'),
+              child: Text('Agregar', style: TextStyle(fontSize: s.f(14))),
             ),
           ),
         ],

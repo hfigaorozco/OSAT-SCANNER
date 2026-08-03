@@ -1,6 +1,9 @@
 import 'etapa.dart';
 
-enum EstadoLote { enProceso, aprobado, rechazado, hold, pendiente }
+// Mismo vocabulario que Estado_Oblea en la web (client/produccion/views.py):
+// proce/termi/recha/enhol — "Terminado" es la palabra real que usa la web
+// para un lote completo; "Aprobado" es vocabulario de Orden, no de Lote.
+enum EstadoLote { enProceso, terminado, rechazado, hold, pendiente }
 
 EstadoLote estadoLoteFromString(String? raw) {
   final s = (raw ?? '').toLowerCase();
@@ -8,9 +11,7 @@ EstadoLote estadoLoteFromString(String? raw) {
   // el chequeo va antes y usa el prefijo corto para calzar con ambos.
   if (s.contains('enhol') || s.contains('hold')) return EstadoLote.hold;
   if (s.contains('recha')) return EstadoLote.rechazado;
-  if (s.contains('aprob') || s.contains('complet') || s.contains('termi')) {
-    return EstadoLote.aprobado;
-  }
+  if (s.contains('termi')) return EstadoLote.terminado;
   if (s.contains('proceso') || s.contains('activo') || s.contains('proce')) {
     return EstadoLote.enProceso;
   }

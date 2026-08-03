@@ -78,43 +78,49 @@ class _AlertasScreenState extends State<AlertasScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final s = AppScale.of(context);
+    final tablet = esTablet(context);
 
     return Scaffold(
       backgroundColor: AppColors.bgApp,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: EdgeInsets.fromLTRB(s.sp(16), s.sp(12), s.sp(16), 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Hola, ${auth.empleado?.nombre ?? 'Operador'}',
-                style: const TextStyle(
+                style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: s.f(18),
                     fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: s.sp(14)),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
                     _FiltroChip(
+                        s: s,
                         label: 'Todas',
                         value: 'todas',
                         current: _filtro,
                         onTap: (v) => setState(() => _filtro = v)),
                     _FiltroChip(
+                        s: s,
                         label: 'No leídas',
                         value: 'no_leidas',
                         current: _filtro,
                         onTap: (v) => setState(() => _filtro = v)),
                     _FiltroChip(
+                        s: s,
                         label: 'Hold',
                         value: 'hold',
                         current: _filtro,
                         onTap: (v) => setState(() => _filtro = v)),
                     _FiltroChip(
+                        s: s,
                         label: 'Stock',
                         value: 'stock',
                         current: _filtro,
@@ -122,33 +128,10 @@ class _AlertasScreenState extends State<AlertasScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: s.sp(12)),
               Expanded(
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: AppColors.green))
-                    : _filtradas.isEmpty
-                        ? const Center(
-                            child: Text('Sin alertas',
-                                style: TextStyle(color: AppColors.textMuted)))
-                        : ListView.separated(
-                            itemCount: _filtradas.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final a = _filtradas[index];
-                              return _AlertaListItem(
-                                alerta: a,
-                                selected: _seleccionada?.id == a.id,
-                                onTap: () =>
-                                    setState(() => _seleccionada = a),
-                              );
-                            },
-                          ),
+                child: tablet ? _layoutTablet(s) : _layoutTelefono(s),
               ),
-              if (_seleccionada != null)
-                _AlertaDetalle(alerta: _seleccionada!),
-              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -160,15 +143,96 @@ class _AlertasScreenState extends State<AlertasScreen> {
       ),
     );
   }
+
+  // ════════════════════════════════════════════════════════════════
+  // LAYOUT TABLET — maestro-detalle lado a lado, no apilado.
+  // ════════════════════════════════════════════════════════════════
+  Widget _layoutTablet(AppScale s) {
+    if (_loading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.green));
+    }
+    if (_filtradas.isEmpty) {
+      return Center(
+        child: Text('Sin alertas',
+            style: TextStyle(color: AppColors.textMuted, fontSize: s.f(15))),
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: ListView.separated(
+            itemCount: _filtradas.length,
+            separatorBuilder: (_, __) => SizedBox(height: s.sp(8)),
+            itemBuilder: (context, index) {
+              final a = _filtradas[index];
+              return _AlertaListItem(
+                s: s,
+                alerta: a,
+                selected: _seleccionada?.id == a.id,
+                onTap: () => setState(() => _seleccionada = a),
+              );
+            },
+          ),
+        ),
+        SizedBox(width: s.sp(20)),
+        Expanded(
+          flex: 3,
+          child: _seleccionada != null
+              ? _AlertaDetalle(s: s, alerta: _seleccionada!)
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // LAYOUT TELÉFONO — lista arriba, detalle abajo, como siempre.
+  // ════════════════════════════════════════════════════════════════
+  Widget _layoutTelefono(AppScale s) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.green))
+              : _filtradas.isEmpty
+                  ? const Center(
+                      child: Text('Sin alertas',
+                          style: TextStyle(color: AppColors.textMuted)))
+                  : ListView.separated(
+                      itemCount: _filtradas.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final a = _filtradas[index];
+                        return _AlertaListItem(
+                          s: s,
+                          alerta: a,
+                          selected: _seleccionada?.id == a.id,
+                          onTap: () => setState(() => _seleccionada = a),
+                        );
+                      },
+                    ),
+        ),
+        if (_seleccionada != null) _AlertaDetalle(s: s, alerta: _seleccionada!),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
 }
 
 class _FiltroChip extends StatelessWidget {
+  final AppScale s;
   final String label;
   final String value;
   final String current;
   final ValueChanged<String> onTap;
 
   const _FiltroChip({
+    required this.s,
     required this.label,
     required this.value,
     required this.current,
@@ -179,11 +243,12 @@ class _FiltroChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = current == value;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: EdgeInsets.only(right: s.sp(8)),
       child: GestureDetector(
         onTap: () => onTap(value),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: EdgeInsets.symmetric(
+              horizontal: s.sp(14), vertical: s.sp(7)),
           decoration: BoxDecoration(
             color: selected ? AppColors.purple : AppColors.bgTopbar,
             borderRadius: BorderRadius.circular(20),
@@ -192,7 +257,7 @@ class _FiltroChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: selected ? Colors.white : AppColors.textMuted,
-              fontSize: 12.5,
+              fontSize: s.f(12.5),
               fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -203,11 +268,13 @@ class _FiltroChip extends StatelessWidget {
 }
 
 class _AlertaListItem extends StatelessWidget {
+  final AppScale s;
   final AlertaOperador alerta;
   final bool selected;
   final VoidCallback onTap;
 
   const _AlertaListItem({
+    required this.s,
     required this.alerta,
     required this.selected,
     required this.onTap,
@@ -255,12 +322,12 @@ class _AlertaListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(s.r(10)),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(s.sp(12)),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFE0F7FA) : AppColors.bgCard,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(s.r(10)),
           border: selected
               ? Border.all(color: AppColors.turquoise, width: 1.3)
               : null,
@@ -268,15 +335,15 @@ class _AlertaListItem extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: s.sp(34),
+              height: s.sp(34),
               decoration: BoxDecoration(
                 color: _color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(s.r(8)),
               ),
-              child: Icon(_icono, size: 18, color: _color),
+              child: Icon(_icono, size: s.ic(18), color: _color),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: s.sp(10)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,21 +352,21 @@ class _AlertaListItem extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: s.f(13),
                         fontWeight:
                             alerta.leida ? FontWeight.normal : FontWeight.w600,
                         color: AppColors.textDark,
                       )),
                   Text(alerta.tiempo,
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.textMuted)),
+                      style: TextStyle(
+                          fontSize: s.f(11), color: AppColors.textMuted)),
                 ],
               ),
             ),
             if (!alerta.leida)
               Container(
-                width: 8,
-                height: 8,
+                width: s.sp(8),
+                height: s.sp(8),
                 decoration: const BoxDecoration(
                     color: AppColors.red, shape: BoxShape.circle),
               ),
@@ -311,45 +378,46 @@ class _AlertaListItem extends StatelessWidget {
 }
 
 class _AlertaDetalle extends StatelessWidget {
+  final AppScale s;
   final AlertaOperador alerta;
-  const _AlertaDetalle({required this.alerta});
+  const _AlertaDetalle({required this.s, required this.alerta});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(s.sp(16)),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(s.r(12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(alerta.titulo,
-              style: const TextStyle(
-                  fontSize: 16,
+              style: TextStyle(
+                  fontSize: s.f(16),
                   fontWeight: FontWeight.bold,
                   color: AppColors.textDark)),
-          const SizedBox(height: 6),
+          SizedBox(height: s.sp(6)),
           Text(alerta.cuerpo,
-              style: const TextStyle(
-                  fontSize: 13, color: AppColors.textDark, height: 1.5)),
+              style: TextStyle(
+                  fontSize: s.f(13), color: AppColors.textDark, height: 1.5)),
           if (alerta.loteFolio != null) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: s.sp(12)),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(s.sp(10)),
               decoration: BoxDecoration(
                 color: const Color(0xFFF7FAFC),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(s.r(8)),
               ),
               child: Row(
                 children: [
-                  const Text('Lote: ',
+                  Text('Lote: ',
                       style: TextStyle(
-                          fontSize: 12, color: AppColors.textMuted)),
+                          fontSize: s.f(12), color: AppColors.textMuted)),
                   Text(alerta.loteFolio!,
-                      style: const TextStyle(
-                          fontSize: 13,
+                      style: TextStyle(
+                          fontSize: s.f(13),
                           fontWeight: FontWeight.bold,
                           fontFamily: 'monospace')),
                 ],

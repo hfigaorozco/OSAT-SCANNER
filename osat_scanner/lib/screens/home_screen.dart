@@ -58,7 +58,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onNavTap(int index) {
-    if (index == 1) { _abrirScanner(); return; }
+    if (index == 1) {
+      _abrirScanner();
+      return;
+    }
     if (index == 2) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const AlertasScreen()))
@@ -120,13 +123,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final empleado = auth.empleado;
-    final tablet = MediaQuery.of(context).size.shortestSide > 600;
+    final s = AppScale.of(context);
+    final tablet = esTablet(context);
 
     return Scaffold(
       backgroundColor: AppColors.bgApp,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: EdgeInsets.fromLTRB(s.sp(16), s.sp(16), s.sp(16), 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -141,9 +145,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Text(
                         'Hola, ${empleado?.nombre ?? 'Operador'}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 19,
+                          fontSize: s.f(19),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -156,21 +160,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       final h = now.hour.toString().padLeft(2, '0');
                       final m = now.minute.toString().padLeft(2, '0');
                       return Text('$h:$m',
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: s.f(20),
                               fontWeight: FontWeight.bold));
                     },
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: s.sp(16)),
 
               // ── Contenido principal — responsive ─────────────────────────
               Expanded(
-                child: tablet ? _layoutTablet() : _layoutTelefono(),
+                child: tablet ? _layoutTablet(s) : _layoutTelefono(s),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: s.sp(12)),
             ],
           ),
         ),
@@ -183,26 +187,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // LAYOUT TABLET — 2 columnas (landscape)
+  // LAYOUT TABLET — 2 columnas (landscape), todo más grande
   // ════════════════════════════════════════════════════════════════
-  Widget _layoutTablet() {
+  Widget _layoutTablet(AppScale s) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           flex: 3,
-          child: SingleChildScrollView(child: _seccionLotes()),
+          child: SingleChildScrollView(child: _seccionLotes(s)),
         ),
-        const SizedBox(width: 20),
+        SizedBox(width: s.sp(24)),
         Expanded(
           flex: 2,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _botonEscaneoGrande(size: 200),
-              const SizedBox(height: 18),
-              _panelBusqueda(),
-            ],
+          // SingleChildScrollView en vez de solo Column+center: en pantallas
+          // más bajas (o con el header ocupando más espacio) el botón grande
+          // + el panel de búsqueda pueden no caber y se desbordaban
+          // ("BOTTOM OVERFLOWED") en vez de simplemente permitir scroll.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _botonEscaneoGrande(s, size: s.sp(200)),
+                SizedBox(height: s.sp(22)),
+                _panelBusqueda(s),
+              ],
+            ),
           ),
         ),
       ],
@@ -212,16 +222,16 @@ class _HomeScreenState extends State<HomeScreen> {
   // ════════════════════════════════════════════════════════════════
   // LAYOUT TELÉFONO — stack vertical (portrait)
   // ════════════════════════════════════════════════════════════════
-  Widget _layoutTelefono() {
+  Widget _layoutTelefono(AppScale s) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: _botonEscaneoGrande(size: 130)),
+          Center(child: _botonEscaneoGrande(s, size: 130)),
           const SizedBox(height: 12),
-          _panelBusqueda(),
+          _panelBusqueda(s),
           const SizedBox(height: 20),
-          _seccionLotes(),
+          _seccionLotes(s),
           const SizedBox(height: 20),
         ],
       ),
@@ -232,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // WIDGETS COMPARTIDOS
   // ════════════════════════════════════════════════════════════════
 
-  Widget _botonEscaneoGrande({required double size}) {
+  Widget _botonEscaneoGrande(AppScale s, {required double size}) {
     return Column(
       children: [
         GestureDetector(
@@ -244,33 +254,32 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.green,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.memory,
-                color: Colors.white, size: size * 0.48),
+            child: Icon(Icons.memory, color: Colors.white, size: size * 0.48),
           ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: s.sp(14)),
         GestureDetector(
           onTap: _abrirScanner,
-          child: const Text('Escanear Lote',
+          child: Text('Escanear Lote',
               style: TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: s.f(20),
                   fontWeight: FontWeight.bold)),
         ),
-        const SizedBox(height: 4),
-        const Text('Apunta tu cámara al código QR',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+        SizedBox(height: s.sp(4)),
+        Text('Apunta tu cámara al código QR',
+            style: TextStyle(color: AppColors.textMuted, fontSize: s.f(13))),
       ],
     );
   }
 
-  Widget _panelBusqueda() {
+  Widget _panelBusqueda(AppScale s) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(s.sp(12)),
       decoration: BoxDecoration(
         color: AppColors.bgTopbar,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(s.r(10)),
       ),
       child: Column(
         children: [
@@ -279,19 +288,19 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: TextField(
                   controller: _codigoCtrl,
-                  style: const TextStyle(
-                      color: AppColors.textDark, fontSize: 13),
+                  style:
+                      TextStyle(color: AppColors.textDark, fontSize: s.f(13)),
                   decoration: InputDecoration(
-                    hintText: 'Ingresa el código del lote',
-                    hintStyle: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 13),
+                    hintText: 'Código del lote o de la orden',
+                    hintStyle: TextStyle(
+                        color: AppColors.textMuted, fontSize: s.f(13)),
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10),
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: s.sp(10), vertical: s.sp(10)),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(s.r(8)),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -299,24 +308,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   onSubmitted: _ejecutarBusqueda,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: s.sp(8)),
               ElevatedButton(
                 onPressed: () => _ejecutarBusqueda(_codigoCtrl.text),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.purple,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 14),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: s.sp(18), vertical: s.sp(14)),
+                  textStyle: TextStyle(fontSize: s.f(14)),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(s.r(8))),
                 ),
                 child: const Text('Buscar'),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          const Text('O ingresa el código manualmente',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          SizedBox(height: s.sp(6)),
+          Text('O ingresa el código manualmente',
+              style: TextStyle(color: AppColors.textMuted, fontSize: s.f(11))),
         ],
       ),
     );
@@ -324,31 +334,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Muestra los resultados de búsqueda mientras se está buscando algo,
   /// o el historial de últimos lotes escaneados cuando el buscador está vacío.
-  Widget _seccionLotes() {
+  Widget _seccionLotes(AppScale s) {
     final buscando = _codigoCtrl.text.trim().isNotEmpty || _resultados != null;
 
     if (buscando) {
       if (_buscando) {
         return const Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
-          child: Center(
-              child: CircularProgressIndicator(color: AppColors.green)),
+          child:
+              Center(child: CircularProgressIndicator(color: AppColors.green)),
         );
       }
       final resultados = _resultados ?? [];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Resultados de búsqueda',
+          Text('Resultados de búsqueda',
               style: TextStyle(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: s.f(15),
                   fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
+          SizedBox(height: s.sp(10)),
           if (resultados.isEmpty)
-            _mensajeVacio('No se encontraron lotes con ese código.')
+            _mensajeVacio(s, 'No se encontraron lotes con ese código.')
           else
-            ...resultados.map(_tarjetaLote),
+            ...resultados.map((l) => _tarjetaLote(s, l)),
         ],
       );
     }
@@ -356,65 +366,76 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Últimos lotes escaneados',
+        Text('Últimos lotes escaneados',
             style: TextStyle(
                 color: Colors.white,
-                fontSize: 15,
+                fontSize: s.f(15),
                 fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
+        SizedBox(height: s.sp(10)),
         if (_recientes.isEmpty)
-          _mensajeVacio(
+          _mensajeVacio(s,
               'No has escaneado ningún lote todavía.\nUsa el botón de escaneo o el buscador de arriba.')
         else
-          ..._recientes.map(_tarjetaLote),
+          ..._recientes.map((l) => _tarjetaLote(s, l)),
       ],
     );
   }
 
-  Widget _mensajeVacio(String texto) {
+  Widget _mensajeVacio(AppScale s, String texto) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(s.sp(24)),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(s.r(12)),
       ),
       alignment: Alignment.center,
       child: Text(
         texto,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        style: TextStyle(color: AppColors.textMuted, fontSize: s.f(13)),
       ),
     );
   }
 
-  Widget _tarjetaLote(LoteResumen l) {
+  Widget _tarjetaLote(AppScale s, LoteResumen l) {
     return InkWell(
       onTap: () => _abrirLote(l.numero),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(s.r(10)),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: EdgeInsets.only(bottom: s.sp(8)),
+        padding: EdgeInsets.symmetric(horizontal: s.sp(14), vertical: s.sp(12)),
         decoration: BoxDecoration(
           color: AppColors.bgCard,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(s.r(10)),
         ),
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                l.folio,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    fontFamily: 'monospace',
-                    color: AppColors.textDark),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.folio,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: s.f(14),
+                        fontFamily: 'monospace',
+                        color: AppColors.textDark),
+                  ),
+                  if (l.ordenFolio != null)
+                    Text(
+                      'De ${l.ordenFolio}',
+                      style: TextStyle(
+                          fontSize: s.f(11.5), color: AppColors.textMuted),
+                    ),
+                ],
               ),
             ),
             BadgeEstadoLote(estado: l.estado),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right,
-                color: AppColors.textMuted, size: 20),
+            SizedBox(width: s.sp(6)),
+            Icon(Icons.chevron_right,
+                color: AppColors.textMuted, size: s.ic(20)),
           ],
         ),
       ),

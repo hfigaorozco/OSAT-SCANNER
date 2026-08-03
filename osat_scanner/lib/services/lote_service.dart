@@ -2,6 +2,7 @@ import '../models/lote.dart';
 import '../models/etapa.dart';
 import '../models/defecto.dart';
 import '../models/lote_resumen.dart';
+import '../models/orden_info.dart';
 import '../utils/constants.dart';
 import 'api_client.dart';
 
@@ -112,8 +113,11 @@ class LoteService {
   }
 
   /// Búsqueda "de verdad": trae los lotes de la BD y regresa los que
-  /// coinciden con lo escrito (por número/folio), en vez de exigir el
-  /// código exacto como [buscarPorFolio].
+  /// coinciden con lo escrito, en vez de exigir el código exacto como
+  /// [buscarPorFolio]. Ahora también encuentra lotes por el número de su
+  /// ORDEN (ej. escribir "7" muestra tanto LOT-0007 como todos los lotes de
+  /// ORD-0007), ya que en la práctica el operador suele saber la orden
+  /// antes que el folio exacto del lote.
   static Future<List<LoteResumen>> buscarCoincidencias(String query) async {
     final soloNumeros = query.replaceAll(RegExp(r'[^0-9]'), '');
     if (soloNumeros.isEmpty) return [];
@@ -123,11 +127,45 @@ class LoteService {
 
     final resultados = lista
         .map((o) => LoteResumen.fromOblea(o))
-        .where((l) =>
-            l.folio.replaceAll(RegExp(r'[^0-9]'), '').contains(soloNumeros))
+        .where((l) {
+          final coincideLote =
+              l.folio.replaceAll(RegExp(r'[^0-9]'), '').contains(soloNumeros);
+          final coincideOrden = l.ordenFolio != null &&
+              l.ordenFolio!
+                  .replaceAll(RegExp(r'[^0-9]'), '')
+                  .contains(soloNumeros);
+          return coincideLote || coincideOrden;
+        })
         .toList();
     resultados.sort((a, b) => b.numero.compareTo(a.numero));
     return resultados;
+  }
+
+  /// Todos los lotes que pertenecen a la misma orden que [ordenNumero] —
+  /// para el selector de "lotes hermanos" en la trazabilidad.
+  static Future<List<LoteResumen>> obtenerLotesDeOrden(int ordenNumero) async {
+    final data = await ApiClient.get(ApiConfig.obleas);
+    final lista = (data as List).cast<Map<String, dynamic>>();
+    final resultados = lista
+        .map((o) => LoteResumen.fromOblea(o))
+        .where((l) => l.ordenNumero == ordenNumero)
+        .toList();
+    resultados.sort((a, b) => a.numero.compareTo(b.numero));
+    return resultados;
+  }
+
+  /// Datos de la Orden a la que pertenece un lote, para mostrar su estado
+  /// junto al del lote (igual que en la web).
+  static Future<OrdenInfo?> obtenerOrden(int ordenNumero) async {
+    final data = await ApiClient.get(ApiConfig.ordenes);
+    final lista = (data as List).cast<Map<String, dynamic>>();
+    for (final o in lista) {
+      final numero = o['numero'] is int
+          ? o['numero'] as int
+          : int.tryParse(o['numero']?.toString() ?? '');
+      if (numero == ordenNumero) return OrdenInfo.fromJson(o);
+    }
+    return null;
   }
 
   /// Catálogo de defectos para el formulario de RFM06, filtrado a solo los

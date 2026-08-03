@@ -88,17 +88,18 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppScale.of(context);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(s.r(12)),
       ),
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(s.sp(8)),
         itemCount: widget.lote.etapas.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 4),
+        separatorBuilder: (_, __) => SizedBox(height: s.sp(4)),
         itemBuilder: (context, index) {
           final etapa = widget.lote.etapas[index];
           final isCompleted = etapa.estado == EstadoEtapa.aprobado;
@@ -114,13 +115,14 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
           if (isActive) pct = _calcularPorcentaje(etapa);
 
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            padding: EdgeInsets.symmetric(
+                horizontal: s.sp(10), vertical: s.sp(10)),
             decoration: BoxDecoration(
               color: isActive ? const Color(0xFFE0F7FA) : null,
               border: isActive
                   ? Border.all(color: const Color(0xFFB2EBF2), width: 1.4)
                   : null,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(s.r(10)),
             ),
             child: Opacity(
               opacity: isPending ? 0.5 : 1,
@@ -131,25 +133,25 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
                     children: [
                       // Círculo de estado
                       Container(
-                        width: 28,
-                        height: 28,
+                        width: s.sp(28),
+                        height: s.sp(28),
                         decoration: BoxDecoration(
                           color: circleColor,
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
                         child: isCompleted
-                            ? const Icon(Icons.check,
-                                size: 14, color: Colors.white)
+                            ? Icon(Icons.check,
+                                size: s.ic(14), color: Colors.white)
                             : Text(
                                 '${index + 1}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 11,
+                                    fontSize: s.f(11),
                                     fontWeight: FontWeight.bold),
                               ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: s.sp(10)),
                       // Nombre y meta
                       Expanded(
                         child: Column(
@@ -159,7 +161,7 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
                               etapa.nombre,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: s.f(14),
                                 fontWeight: isActive
                                     ? FontWeight.w600
                                     : FontWeight.w400,
@@ -171,8 +173,8 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
                             if (etapa.metaLine.isNotEmpty)
                               Text(
                                 etapa.metaLine,
-                                style: const TextStyle(
-                                    fontSize: 11.5,
+                                style: TextStyle(
+                                    fontSize: s.f(11.5),
                                     color: AppColors.textMuted),
                               ),
                           ],
@@ -187,15 +189,15 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.green,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: s.sp(12), vertical: s.sp(8)),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(7)),
+                                borderRadius: BorderRadius.circular(s.r(7))),
                             elevation: 0,
                           ),
-                          child: const Text('Completar',
+                          child: Text('Completar',
                               style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: s.f(12),
                                   fontWeight: FontWeight.w600)),
                         )
                       else if (isCompleted)
@@ -205,7 +207,7 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
 
                   // ── Barra de progreso — solo etapa activa ──
                   if (isActive && etapa.tiempoEstimadoSeg != null && etapa.tiempoEstimadoSeg! > 0) ...[
-                    const SizedBox(height: 8),
+                    SizedBox(height: s.sp(8)),
                     Row(
                       children: [
                         Expanded(
@@ -219,36 +221,36 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
                                   Text(
                                     'Progreso: ${(pct * 100).toStringAsFixed(0)}%',
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: s.f(10),
                                         fontWeight: FontWeight.w600,
                                         color: _barColor(pct)),
                                   ),
                                   Text(
                                     '${_formatElapsed(etapa)} / ${_formatSeg(etapa.tiempoEstimadoSeg!)}',
-                                    style: const TextStyle(
-                                        fontSize: 10,
+                                    style: TextStyle(
+                                        fontSize: s.f(10),
                                         color: AppColors.textMuted),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: s.sp(4)),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(999),
                                 child: LinearProgressIndicator(
                                   value: pct,
-                                  minHeight: 5,
+                                  minHeight: s.sp(5),
                                   backgroundColor: const Color(0xFFB2EBF2),
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                       _barColor(pct)),
                                 ),
                               ),
                               if (pct >= 1.0)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 3),
+                                Padding(
+                                  padding: EdgeInsets.only(top: s.sp(3)),
                                   child: Text(
                                     '⚠ Tiempo estimado superado',
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: s.f(10),
                                         color: AppColors.red,
                                         fontWeight: FontWeight.w500),
                                   ),
@@ -259,11 +261,11 @@ class _TrazabilidadStepperState extends State<TrazabilidadStepper> {
                       ],
                     ),
                   ] else if (isActive) ...[
-                    const SizedBox(height: 6),
-                    const Text(
+                    SizedBox(height: s.sp(6)),
+                    Text(
                       'Sin tiempo estimado configurado',
                       style: TextStyle(
-                          fontSize: 10,
+                          fontSize: s.f(10),
                           color: AppColors.textMuted,
                           fontStyle: FontStyle.italic),
                     ),

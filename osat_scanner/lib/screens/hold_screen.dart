@@ -51,18 +51,19 @@ class _HoldScreenState extends State<HoldScreen> {
     final loteProv = context.watch<LoteProvider>();
     final lote = loteProv.loteActual;
     final etapa = lote?.etapaActual;
+    final s = AppScale.of(context);
 
     return Scaffold(
       backgroundColor: Colors.black54,
       body: SafeArea(
         child: Center(
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            constraints: const BoxConstraints(maxWidth: 480),
-            padding: const EdgeInsets.all(20),
+            margin: EdgeInsets.symmetric(horizontal: s.sp(16)),
+            constraints: BoxConstraints(maxWidth: s.sp(480)),
+            padding: EdgeInsets.all(s.sp(20)),
             decoration: BoxDecoration(
               color: AppColors.bgCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(s.r(16)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -73,26 +74,29 @@ class _HoldScreenState extends State<HoldScreen> {
                   children: [
                     Text(
                       etapa?.nombre ?? 'Poner en Hold',
-                      style: const TextStyle(
-                          fontSize: 18,
+                      style: TextStyle(
+                          fontSize: s.f(18),
                           fontWeight: FontWeight.bold,
                           color: AppColors.textDark),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: AppColors.textMuted),
+                      icon: Icon(Icons.close,
+                          color: AppColors.textMuted, size: s.ic(24)),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
                 if (lote != null)
                   Text(lote.folio,
-                      style: const TextStyle(
-                          fontSize: 12.5, color: AppColors.textMuted)),
-                const SizedBox(height: 16),
+                      style: TextStyle(
+                          fontSize: s.f(12.5), color: AppColors.textMuted)),
+                SizedBox(height: s.sp(16)),
                 Text.rich(
                   TextSpan(
-                    style: const TextStyle(
-                        fontSize: 13.5, color: AppColors.textDark, height: 1.5),
+                    style: TextStyle(
+                        fontSize: s.f(13.5),
+                        color: AppColors.textDark,
+                        height: 1.5),
                     children: [
                       const TextSpan(text: 'El lote '),
                       TextSpan(
@@ -104,57 +108,64 @@ class _HoldScreenState extends State<HoldScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
-                const Text('Motivo *',
+                SizedBox(height: s.sp(18)),
+                Text('Motivo *',
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: s.f(13),
                         fontWeight: FontWeight.w600,
                         color: AppColors.textDark)),
-                const SizedBox(height: 8),
+                SizedBox(height: s.sp(8)),
                 TextField(
                   controller: _motivoCtrl,
                   maxLines: 4,
+                  style: TextStyle(fontSize: s.f(14)),
                   decoration: InputDecoration(
                     hintText: 'Describe el motivo del hold...',
-                    hintStyle: const TextStyle(
-                        fontSize: 13, color: AppColors.textMuted),
+                    hintStyle: TextStyle(
+                        fontSize: s.f(13), color: AppColors.textMuted),
                     filled: true,
                     fillColor: const Color(0xFFF7FAFC),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(s.r(8)),
                       borderSide: const BorderSide(color: AppColors.borderCard),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: s.sp(20)),
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 13),
+                      child: SizedBox(
+                        height: s.h(44),
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            textStyle: TextStyle(fontSize: s.f(14)),
+                          ),
+                          child: const Text('Cancelar'),
                         ),
-                        child: const Text('Cancelar'),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: s.sp(12)),
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: _enviando ? null : _confirmar,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.gold,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 13),
+                      child: SizedBox(
+                        height: s.h(44),
+                        child: ElevatedButton(
+                          onPressed: _enviando ? null : _confirmar,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold,
+                            foregroundColor: Colors.white,
+                            textStyle: TextStyle(fontSize: s.f(14)),
+                          ),
+                          child: _enviando
+                              ? SizedBox(
+                                  width: s.ic(20),
+                                  height: s.ic(20),
+                                  child: const CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2.2),
+                                )
+                              : const Text('Confirmar Hold'),
                         ),
-                        child: _enviando
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2.2),
-                              )
-                            : const Text('Confirmar Hold'),
                       ),
                     ),
                   ],
