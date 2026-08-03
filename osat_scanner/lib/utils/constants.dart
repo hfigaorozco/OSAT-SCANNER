@@ -31,13 +31,22 @@ class AppColors {
 }
 
 class ApiConfig {
+  /// Emulador de Android (teléfono o tablet, ej. Pixel_6/Pixel_Tablet AVD):
+  /// usa 10.0.2.2 — es el alias que el emulador usa para apuntar al
+  /// localhost de la PC host, y NO requiere ningún paso manual (adb reverse).
+  /// Este es el valor por defecto porque el desarrollo/pruebas se hacen
+  /// contra emuladores.
+  ///
   /// Dispositivo físico por USB: corre `adb reverse tcp:8001 tcp:8001` y usa
   /// 127.0.0.1 (el teléfono reenvía ese puerto al localhost de la PC por el cable).
-  /// Emulador de Android: usa 10.0.2.2 en vez de 127.0.0.1 (10.0.2.2 es el
-  /// alias que el emulador usa para apuntar al localhost de la PC host).
   /// Dispositivo físico por WiFi (sin cable): usa la IP local de tu PC
   /// (ej. 192.168.1.50) y corre el backend con 0.0.0.0:8001 en vez de 127.0.0.1.
-  static const String baseUrl = 'http://127.0.0.1:8001/api';
+  ///
+  /// Se puede sobreescribir en tiempo de compilación sin tocar este archivo:
+  /// flutter run --dart-define=API_HOST=127.0.0.1
+  static const String _host =
+      String.fromEnvironment('API_HOST', defaultValue: '10.0.2.2');
+  static const String baseUrl = 'http://$_host:8001/api';
 
   static const String login = '$baseUrl/v1/auth/login/';
   static const String logout = '$baseUrl/v1/auth/logout/';
@@ -60,19 +69,37 @@ class ApiConfig {
   static String updateAlerta(int pk) => '$baseUrl/v1/update/alerta/$pk/';
 }
 
-class AppTextStyles {
-  static const screenTitle = TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-  );
-  static const subtitle = TextStyle(
-    fontSize: 13,
-    color: AppColors.textMuted,
-  );
-  static const cardTitle = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textDark,
-  );
+/// Umbral de lado más corto (dp) a partir del cual un dispositivo se
+/// considera tablet — mismo criterio en toda la app (main.dart, layouts
+/// responsive de cada pantalla).
+bool esTablet(BuildContext context) {
+  return MediaQuery.of(context).size.shortestSide > 600;
+}
+
+/// Sistema de escalado responsive: en tablet TODO se ve más grande y
+/// legible (texto, iconos, botones, separaciones) en vez de solo tener
+/// más espacio vacío alrededor de un diseño pensado para teléfono.
+/// Uso: `final s = AppScale.of(context);` y luego `s.f(14)` para texto,
+/// `s.sp(12)` para espaciados/paddings, `s.ic(20)` para iconos.
+class AppScale {
+  final bool tablet;
+  const AppScale._(this.tablet);
+
+  factory AppScale.of(BuildContext context) => AppScale._(esTablet(context));
+
+  /// Tamaño de fuente.
+  double f(double phoneSize) => tablet ? phoneSize * 1.45 : phoneSize;
+
+  /// Espaciado / padding / margen.
+  double sp(double phoneSize) => tablet ? phoneSize * 1.4 : phoneSize;
+
+  /// Iconos.
+  double ic(double phoneSize) => tablet ? phoneSize * 1.35 : phoneSize;
+
+  /// Alto de botones y campos de formulario.
+  double h(double phoneSize) => tablet ? phoneSize * 1.3 : phoneSize;
+
+  /// Radio de bordes — se exagera menos que el resto para que no se vea
+  /// "globoso".
+  double r(double phoneSize) => tablet ? phoneSize * 1.15 : phoneSize;
 }

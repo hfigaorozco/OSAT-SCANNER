@@ -44,48 +44,58 @@ class OsatToast {
         break;
     }
 
+    final s = AppScale.of(context);
+    final tablet = esTablet(context);
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (ctx) => Positioned(
-        top: 16,
+        top: s.sp(16),
         left: 16,
         right: 16,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: bg,
-              border: Border.all(color: border, width: 1.2),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: iconColor, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(message,
-                      style: const TextStyle(
-                          fontSize: 13.5, color: AppColors.textDark)),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: tablet ? 560 : double.infinity),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: s.sp(14), vertical: s.sp(12)),
+                decoration: BoxDecoration(
+                  color: bg,
+                  border: Border.all(color: border, width: 1.2),
+                  borderRadius: BorderRadius.circular(s.r(8)),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 2))
+                  ],
                 ),
-                if (actionLabel != null)
-                  TextButton(
-                    onPressed: () {
-                      entry.remove();
-                      onAction?.call();
-                    },
-                    child: Text(actionLabel,
-                        style: const TextStyle(
-                            color: AppColors.turquoise,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13)),
-                  ),
-              ],
+                child: Row(
+                  children: [
+                    Icon(icon, color: iconColor, size: s.ic(20)),
+                    SizedBox(width: s.sp(10)),
+                    Expanded(
+                      child: Text(message,
+                          style: TextStyle(
+                              fontSize: s.f(13.5), color: AppColors.textDark)),
+                    ),
+                    if (actionLabel != null)
+                      TextButton(
+                        onPressed: () {
+                          entry.remove();
+                          onAction?.call();
+                        },
+                        child: Text(actionLabel,
+                            style: TextStyle(
+                                color: AppColors.turquoise,
+                                fontWeight: FontWeight.w600,
+                                fontSize: s.f(13))),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

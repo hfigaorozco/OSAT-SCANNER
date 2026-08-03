@@ -65,26 +65,44 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _intentarConfigurar());
   }
 
+  // El primer frame de Flutter arranca con la superficie en 0x0 (todavía no
+  // llegan las métricas reales de la ventana de Android) — ni
+  // didChangeDependencies ni el primer postFrameCallback tienen un tamaño
+  // válido en ese instante. Sin esto, cualquier tablet se detectaba como
+  // teléfono (shortestSide=0), se le forzaba portrait, y Android 12L+ la
+  // dejaba "letterboxeada" (recuadrada, angosta) el resto de la sesión ya
+  // que la detección solo corría una vez. didChangeMetrics() se dispara de
+  // nuevo cuando llegan las métricas reales, así que se reintenta ahí hasta
+  // tener una medición válida.
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_orientacionConfigurada) {
-      _configurarOrientacion();
-      _orientacionConfigurada = true;
-    }
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    _intentarConfigurar();
   }
 
-  void _configurarOrientacion() {
+  void _intentarConfigurar() {
+    if (_orientacionConfigurada || !mounted) return;
     final shortestSide = MediaQuery.of(context).size.shortestSide;
+    if (shortestSide <= 0) return; // aún no llegan las métricas reales
+    _configurarOrientacion(shortestSide);
+    _orientacionConfigurada = true;
+  }
+
+  void _configurarOrientacion(double shortestSide) {
     final esTablet = shortestSide > 600;
 
     if (esTablet) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+      // En pantallas grandes NO se fuerza una orientación: Android 12L+
+      // le mete "letterbox" (recuadra la app en una ventana angosta tipo
+      // teléfono) a cualquier actividad que pida una orientación fija en
+      // un dispositivo grande, sin importar resizeableActivity en el
+      // manifest. Se deja libre y el layout responsive de cada pantalla
+      // (ver esTablet()/shortestSide en home_screen.dart) se adapta sola
+      // tanto en portrait como en landscape.
+      SystemChrome.setPreferredOrientations([]);
     } else {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -128,9 +146,4 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
       ],
     );
   }
-}
-
-/// Helper global para saber si el dispositivo es tablet
-bool esTablet(BuildContext context) {
-  return MediaQuery.of(context).size.shortestSide > 600;
 }

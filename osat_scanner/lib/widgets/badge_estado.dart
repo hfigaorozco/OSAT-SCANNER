@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/lote.dart';
 import '../models/etapa.dart';
+import '../models/orden_info.dart';
 import '../utils/constants.dart';
 
 class BadgeEstadoLote extends StatelessWidget {
@@ -17,10 +18,10 @@ class BadgeEstadoLote extends StatelessWidget {
         text = AppColors.badgeYellowText;
         label = 'En proceso';
         break;
-      case EstadoLote.aprobado:
+      case EstadoLote.terminado:
         bg = AppColors.badgeGreenBg;
         text = AppColors.badgeGreenText;
-        label = 'Aprobado';
+        label = 'Terminado';
         break;
       case EstadoLote.rechazado:
         bg = AppColors.badgeRedBg;
@@ -30,9 +31,43 @@ class BadgeEstadoLote extends StatelessWidget {
       case EstadoLote.hold:
         bg = AppColors.badgeYellowBg;
         text = AppColors.badgeYellowText;
-        label = 'Hold';
+        label = 'En Hold';
         break;
       case EstadoLote.pendiente:
+        bg = AppColors.badgeGrayBg;
+        text = AppColors.badgeGrayText;
+        label = 'Pendiente';
+        break;
+    }
+    return _Pill(bg: bg, text: text, label: label);
+  }
+}
+
+class BadgeEstadoOrden extends StatelessWidget {
+  final EstadoOrden estado;
+  const BadgeEstadoOrden({super.key, required this.estado});
+
+  @override
+  Widget build(BuildContext context) {
+    late Color bg, text;
+    late String label;
+    switch (estado) {
+      case EstadoOrden.enProceso:
+        bg = AppColors.badgeYellowBg;
+        text = AppColors.badgeYellowText;
+        label = 'En proceso';
+        break;
+      case EstadoOrden.aprobado:
+        bg = AppColors.badgeGreenBg;
+        text = AppColors.badgeGreenText;
+        label = 'Aprobado';
+        break;
+      case EstadoOrden.hold:
+        bg = AppColors.badgeYellowBg;
+        text = AppColors.badgeYellowText;
+        label = 'En Hold';
+        break;
+      case EstadoOrden.pendiente:
         bg = AppColors.badgeGrayBg;
         text = AppColors.badgeGrayText;
         label = 'Pendiente';
@@ -89,8 +124,9 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppScale.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: s.sp(10), vertical: s.sp(2)),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
@@ -98,7 +134,7 @@ class _Pill extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: s.f(11),
           fontWeight: FontWeight.w600,
           color: text,
         ),
