@@ -104,7 +104,7 @@ class AuthProvider extends ChangeNotifier {
 
   void touchActivity() => AuthService.touchActivity();
 
-  /// Se llama al volver del segundo plano. Si pasaron +30 min sin actividad,
+  /// Se llama al volver del segundo plano. Si pasaron +1 min sin actividad,
   /// bloquea la app localmente — el token sigue válido en el servidor, solo
   /// se pide confirmar identidad antes de dejar seguir usándola.
   Future<void> checkInactivityLock() async {
@@ -115,6 +115,17 @@ class AuthProvider extends ChangeNotifier {
       _lockError = null;
       notifyListeners();
     }
+  }
+
+  /// Igual que checkInactivityLock, pero para el timer de inactividad en
+  /// primer plano (main.dart): ahí el propio timer ya demostró que pasó el
+  /// tiempo sin actividad, así que no hace falta volver a consultar la hora
+  /// guardada — solo bloquea.
+  void lockNow() {
+    if (!isLoggedIn || _locked) return;
+    _locked = true;
+    _lockError = null;
+    notifyListeners();
   }
 
   /// Confirmación de identidad local: valida la contraseña del operador ya

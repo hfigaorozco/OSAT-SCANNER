@@ -76,9 +76,6 @@ bool esTablet(BuildContext context) {
   return MediaQuery.of(context).size.shortestSide > 600;
 }
 
-/// Sistema de escalado responsive: en tablet TODO se ve más grande y
-/// legible (texto, iconos, botones, separaciones) en vez de solo tener
-/// más espacio vacío alrededor de un diseño pensado para teléfono.
 /// Uso: `final s = AppScale.of(context);` y luego `s.f(14)` para texto,
 /// `s.sp(12)` para espaciados/paddings, `s.ic(20)` para iconos.
 class AppScale {
