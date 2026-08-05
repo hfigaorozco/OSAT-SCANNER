@@ -219,12 +219,14 @@ class PerfilScreen extends StatelessWidget {
                 icon: Icons.email_outlined,
                 label: 'Correo',
                 value: empleado?.email ?? '—'),
-            const Divider(height: 1),
-            _InfoRow(
-                s: s,
-                icon: Icons.toggle_on_outlined,
-                label: 'Estado',
-                value: empleado?.estado ?? '—'),
+            if (empleado?.lineaNombre != null) ...[
+              const Divider(height: 1),
+              _InfoRow(
+                  s: s,
+                  icon: Icons.factory_outlined,
+                  label: 'Línea',
+                  value: empleado!.lineaNombre!),
+            ],
           ],
         ),
       ],

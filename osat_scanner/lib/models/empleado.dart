@@ -7,6 +7,8 @@ class Empleado {
   final String email;
   final String rol;
   final String estado;
+  final String? lineaCodigo;
+  final String? lineaNombre;
 
   Empleado({
     required this.numero,
@@ -17,6 +19,8 @@ class Empleado {
     required this.email,
     required this.rol,
     required this.estado,
+    this.lineaCodigo,
+    this.lineaNombre,
   });
 
   String get nombreCompleto => '$nombre $primerApell $seguApell';
@@ -31,6 +35,8 @@ class Empleado {
       email: json['email'] ?? '',
       rol: json['rol']?.toString() ?? 'Operador',
       estado: json['estado']?.toString() ?? '—',
+      lineaCodigo: json['linea_codigo']?.toString(),
+      lineaNombre: json['linea_nombre']?.toString(),
     );
   }
 }
