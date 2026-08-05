@@ -168,6 +168,22 @@ class LoteService {
     return null;
   }
 
+  /// Órdenes activas en la línea del operador (Orden.linea, ya existe en
+  /// la BD vía la máquina asignada al operador) — para que las vea listas
+  /// en Inicio sin tener que buscarlas a mano. Se excluyen las ya
+  /// cerradas (aprobadas/rechazadas), igual que "órdenes activas" en web.
+  static Future<List<OrdenInfo>> obtenerOrdenesPorLinea(String lineaCodigo) async {
+    final data = await ApiClient.get(ApiConfig.ordenes);
+    final lista = (data as List).cast<Map<String, dynamic>>();
+    final resultados = lista
+        .where((o) => o['linea']?.toString() == lineaCodigo)
+        .map((o) => OrdenInfo.fromJson(o))
+        .where((o) => o.estado != EstadoOrden.aprobado)
+        .toList();
+    resultados.sort((a, b) => b.numero.compareTo(a.numero));
+    return resultados;
+  }
+
   /// Catálogo de defectos para el formulario de RFM06, filtrado a solo los
   /// defectos ligados al paso que se está completando (un paso puede tener
   /// varios defectos posibles, un defecto puede aparecer en varios pasos).

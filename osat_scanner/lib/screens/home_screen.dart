@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/lote_resumen.dart';
+import '../models/orden_info.dart';
 import '../services/lote_service.dart';
 import '../services/recientes_service.dart';
 import '../utils/constants.dart';
@@ -29,10 +30,40 @@ class _HomeScreenState extends State<HomeScreen> {
   List<LoteResumen>? _resultados; // null = no se ha buscado nada todavía
   bool _buscando = false;
 
+  List<OrdenInfo> _ordenesLinea = [];
+  bool _cargandoOrdenesLinea = false;
+
   @override
   void initState() {
     super.initState();
     _cargarRecientes();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _cargarOrdenesLinea());
+  }
+
+  Future<void> _cargarOrdenesLinea() async {
+    final lineaCodigo = context.read<AuthProvider>().empleado?.lineaCodigo;
+    if (lineaCodigo == null) return;
+    setState(() => _cargandoOrdenesLinea = true);
+    try {
+      final ordenes = await LoteService.obtenerOrdenesPorLinea(lineaCodigo);
+      if (!mounted) return;
+      setState(() {
+        _ordenesLinea = ordenes;
+        _cargandoOrdenesLinea = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cargandoOrdenesLinea = false);
+    }
+  }
+
+  /// Abre el primer lote de la orden — de ahí el operador puede saltar
+  /// entre todos los lotes hermanos de esa misma orden (selector que ya
+  /// existe dentro de Trazado).
+  Future<void> _abrirOrden(int ordenNumero) async {
+    final lotes = await LoteService.obtenerLotesDeOrden(ordenNumero);
+    if (!mounted || lotes.isEmpty) return;
+    await _abrirLote(lotes.first.numero);
   }
 
   @override
@@ -117,6 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
     if (!mounted) return;
     _cargarRecientes();
+    _cargarOrdenesLinea();
   }
 
   @override
@@ -143,13 +175,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text(
-                        'Hola, ${empleado?.nombre ?? 'Operador'}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: s.f(19),
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hola, ${empleado?.nombre ?? 'Operador'}',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: s.f(19),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (empleado?.lineaNombre != null)
+                            Text(
+                              empleado!.lineaNombre!,
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: s.f(12.5),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -366,6 +411,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_cargandoOrdenesLinea || _ordenesLinea.isNotEmpty) ...[
+          _seccionOrdenesLinea(s),
+          SizedBox(height: s.sp(20)),
+        ],
         Text('Últimos lotes escaneados',
             style: TextStyle(
                 color: Colors.white,
@@ -378,6 +427,73 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           ..._recientes.map((l) => _tarjetaLote(s, l)),
       ],
+    );
+  }
+
+  /// Órdenes activas en la línea del operador — para que ya las vea
+  /// listas y pueda entrar directo a trazarlas sin buscarlas a mano.
+  Widget _seccionOrdenesLinea(AppScale s) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Órdenes en tu línea',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: s.f(15),
+                fontWeight: FontWeight.w600)),
+        SizedBox(height: s.sp(10)),
+        if (_cargandoOrdenesLinea)
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: s.sp(12)),
+            child: const Center(
+                child: CircularProgressIndicator(color: AppColors.green)),
+          )
+        else
+          ..._ordenesLinea.map((o) => _tarjetaOrden(s, o)),
+      ],
+    );
+  }
+
+  Widget _tarjetaOrden(AppScale s, OrdenInfo o) {
+    return InkWell(
+      onTap: () => _abrirOrden(o.numero),
+      borderRadius: BorderRadius.circular(s.r(10)),
+      child: Container(
+        margin: EdgeInsets.only(bottom: s.sp(8)),
+        padding: EdgeInsets.symmetric(horizontal: s.sp(14), vertical: s.sp(12)),
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(s.r(10)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    o.folio,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: s.f(14),
+                        fontFamily: 'monospace',
+                        color: AppColors.textDark),
+                  ),
+                  Text(
+                    o.proceso,
+                    style: TextStyle(
+                        fontSize: s.f(11.5), color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            BadgeEstadoOrden(estado: o.estado),
+            SizedBox(width: s.sp(6)),
+            Icon(Icons.chevron_right,
+                color: AppColors.textMuted, size: s.ic(20)),
+          ],
+        ),
+      ),
     );
   }
 

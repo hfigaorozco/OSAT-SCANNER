@@ -9,9 +9,7 @@ class AuthService {
   static const _lastActivityKey = 'osat_last_activity';
 
   /// RFM01 — Tiempo en segundo plano tras el cual se pide confirmar
-  /// identidad de nuevo. Para hacer una demo en vivo, baja este valor
-  /// temporalmente (ej. Duration(seconds: 10)) y luego regrésalo a 30 min.
-  static const Duration inactivityTimeout = Duration(minutes: 30);
+  static const Duration inactivityTimeout = Duration(minutes: 1);
 
   /// RFM01 — Login con usuario empresarial y contraseña.
   /// Devuelve el Empleado autenticado y guarda el token.
