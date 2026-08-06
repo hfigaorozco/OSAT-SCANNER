@@ -13,6 +13,11 @@ class AppColors {
   static const gold = Color(0xFFF5A623);
   static const red = Color(0xFFEF5350);
 
+  // Tipos de alerta — mismos colores que kpi/views.py::_COLOR_MAP en la web,
+  // para que un operador vea el mismo código de color en móvil y en la
+  // pantalla de Alertas del admin/supervisor.
+  static const alertaKpi = Color(0xFF8E44AD);
+
   static const textDark = Color(0xFF1A202C);
   static const textMuted = Color(0xFF718096);
   static const textOnDark = Color(0xFFFEFDFD);
@@ -63,6 +68,14 @@ class ApiConfig {
   // y no trae 'descripcion'; las alertas del operador (hold, rechazos, etc.)
   // viven en 'alertas'.
   static const String alertas = '$baseUrl/v1/list/alertas/';
+  // Alertas ya clasificadas por tipo (stock/produccion/kpi) y priorizadas
+  // según la línea del operador (?empleado=<numero>) — ver
+  // osat_tracer/api_kpi/views.py::AlertasOperadorAPIView.
+  static const String alertasOperador = '$baseUrl/v1/list/alertas_operador/';
+  // Configuración de la app móvil, editable desde Configuración > Configuración
+  // de la app móvil en la web (independiente del horario laboral, que es de
+  // otra pantalla). Solo trae minutos de inactividad antes de bloquear sesión.
+  static const String configMovil = '$baseUrl/v1/config/movil/';
 
   static String obleaDetail(int numero) => '$baseUrl/v1/detail/Oblea/$numero/';
   static String updateOblea(int numero) => '$baseUrl/v1/update/Oblea/$numero/'; // ajustar si el back lo agrega
@@ -76,9 +89,6 @@ bool esTablet(BuildContext context) {
   return MediaQuery.of(context).size.shortestSide > 600;
 }
 
-/// Sistema de escalado responsive: en tablet TODO se ve más grande y
-/// legible (texto, iconos, botones, separaciones) en vez de solo tener
-/// más espacio vacío alrededor de un diseño pensado para teléfono.
 /// Uso: `final s = AppScale.of(context);` y luego `s.f(14)` para texto,
 /// `s.sp(12)` para espaciados/paddings, `s.ic(20)` para iconos.
 class AppScale {

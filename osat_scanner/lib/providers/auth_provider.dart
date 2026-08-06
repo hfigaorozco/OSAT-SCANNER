@@ -29,6 +29,13 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _empleado = await AuthService.login(username, password);
+      // Se espera a que termine (falla en silencio si no hay red, dejando
+      // el valor de respaldo) — main.dart arma el timer de inactividad
+      // justo después de este login, así que si no se espera aquí, el
+      // timer se crea con la duración vieja/por defecto y el valor nuevo
+      // llega demasiado tarde para tener efecto (un Timer ya creado no
+      // cambia de duración aunque se reasigne la variable después).
+      await AuthService.cargarConfiguracion();
       _loading = false;
       notifyListeners();
       return true;
@@ -58,6 +65,13 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> tryRestoreSession() async {
     final logged = await AuthService.isLoggedIn();
     if (!logged) return false;
+
+    // Refresca el timeout de inactividad por si se cambió desde la web
+    // mientras la app estaba cerrada — ANTES de revisar si la sesión ya
+    // expiró por inactividad, porque esa revisión lee este mismo valor.
+    // Si se esperara a después, el check de expiración correría contra la
+    // duración vieja/por defecto en vez de la configurada en el server.
+    await AuthService.cargarConfiguracion();
 
     final expired = await AuthService.sessionExpiredByInactivity();
     if (expired) {
@@ -104,7 +118,7 @@ class AuthProvider extends ChangeNotifier {
 
   void touchActivity() => AuthService.touchActivity();
 
-  /// Se llama al volver del segundo plano. Si pasaron +30 min sin actividad,
+  /// Se llama al volver del segundo plano. Si pasaron +1 min sin actividad,
   /// bloquea la app localmente — el token sigue válido en el servidor, solo
   /// se pide confirmar identidad antes de dejar seguir usándola.
   Future<void> checkInactivityLock() async {
@@ -115,6 +129,17 @@ class AuthProvider extends ChangeNotifier {
       _lockError = null;
       notifyListeners();
     }
+  }
+
+  /// Igual que checkInactivityLock, pero para el timer de inactividad en
+  /// primer plano (main.dart): ahí el propio timer ya demostró que pasó el
+  /// tiempo sin actividad, así que no hace falta volver a consultar la hora
+  /// guardada — solo bloquea.
+  void lockNow() {
+    if (!isLoggedIn || _locked) return;
+    _locked = true;
+    _lockError = null;
+    notifyListeners();
   }
 
   /// Confirmación de identidad local: valida la contraseña del operador ya

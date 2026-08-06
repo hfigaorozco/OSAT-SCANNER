@@ -8,8 +8,29 @@ class AuthService {
   static const _usernameKey = 'osat_username';
   static const _lastActivityKey = 'osat_last_activity';
 
-  /// RFM01 — Tiempo en segundo plano tras el cual se pide confirmar
-  static const Duration inactivityTimeout = Duration(minutes: 1);
+  /// RFM01 — Tiempo en segundo plano tras el cual se pide confirmar.
+  /// Ya no es un valor fijo: se sobreescribe con lo que devuelva
+  /// /v1/config/movil/ (editable desde la web en Configuración > Configuración
+  /// de la app móvil — independiente del horario laboral, que es otra
+  /// pantalla) cada vez que se llama a cargarConfiguracion() — 30 min es
+  /// solo el valor de respaldo si el fetch falla (sin conexión, etc).
+  static Duration inactivityTimeout = const Duration(minutes: 30);
+
+  /// Trae la configuración de la app móvil desde el backend. Se llama tras
+  /// login y al restaurar sesión — si falla (sin red), se queda con el
+  /// valor que ya tuviera cargado, para no romper el flujo de inicio de
+  /// sesión por esto.
+  static Future<void> cargarConfiguracion() async {
+    try {
+      final data = await ApiClient.get(ApiConfig.configMovil, auth: false);
+      final minutos = data['inactividad_minutos'];
+      if (minutos is int && minutos > 0) {
+        inactivityTimeout = Duration(minutes: minutos);
+      }
+    } catch (_) {
+      // Sin red o backend no disponible: se mantiene el valor actual.
+    }
+  }
 
   /// RFM01 — Login con usuario empresarial y contraseña.
   /// Devuelve el Empleado autenticado y guarda el token.

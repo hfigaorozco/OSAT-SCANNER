@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import '../models/alerta_operador.dart';
 import '../services/alerta_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/lote_provider.dart';
 import '../utils/constants.dart';
 import '../widgets/osat_bottom_nav.dart';
 import 'home_screen.dart';
 import 'scanner_screen.dart';
+import 'trazado_screen.dart';
 
 class AlertasScreen extends StatefulWidget {
   const AlertasScreen({super.key});
@@ -19,7 +21,7 @@ class _AlertasScreenState extends State<AlertasScreen> {
   List<AlertaOperador> _alertas = [];
   AlertaOperador? _seleccionada;
   bool _loading = true;
-  String _filtro = 'todas'; // todas | no_leidas | hold | stock
+  String _filtro = 'todas'; // todas | no_leidas | produccion | kpi | stock
 
   @override
   void initState() {
@@ -30,7 +32,11 @@ class _AlertasScreenState extends State<AlertasScreen> {
   Future<void> _cargar() async {
     setState(() => _loading = true);
     try {
-      final lista = await AlertaService.listar();
+      final empleadoNumero = context.read<AuthProvider>().empleado?.numero;
+      // El backend ya regresa la lista ordenada por prioridad: alertas de la
+      // línea propia del operador primero, luego por tipo (producción > kpi
+      // > stock) y no leídas antes que leídas — no hay que reordenar aquí.
+      final lista = await AlertaService.listar(empleadoNumero: empleadoNumero);
       if (!mounted) return;
       setState(() {
         _alertas = lista;
@@ -43,16 +49,37 @@ class _AlertasScreenState extends State<AlertasScreen> {
     }
   }
 
+  /// Selecciona una alerta para verla en el panel de detalle y, si no
+  /// estaba leída, la marca como leída en el backend — antes esto nunca
+  /// pasaba (el onTap solo cambiaba la selección), así que el chip "No
+  /// leídas" y el badge del bottom nav nunca bajaban por nada que hiciera
+  /// el operador en la app.
+  Future<void> _seleccionar(AlertaOperador a) async {
+    setState(() => _seleccionada = a);
+    if (a.leida) return;
+    final idx = _alertas.indexWhere((x) => x.numero == a.numero);
+    final actualizada = a.copyWith(leida: true);
+    setState(() {
+      if (idx != -1) _alertas[idx] = actualizada;
+      _seleccionada = actualizada;
+    });
+    try {
+      await AlertaService.marcarLeida(a.numero);
+    } catch (_) {
+      if (idx != -1 && mounted) setState(() => _alertas[idx] = a);
+    }
+  }
+
   List<AlertaOperador> get _filtradas {
     switch (_filtro) {
       case 'no_leidas':
         return _alertas.where((a) => !a.leida).toList();
-      case 'hold':
-        return _alertas.where((a) => a.tipo == TipoAlertaOperador.hold).toList();
+      case 'produccion':
+        return _alertas.where((a) => a.tipo == TipoAlertaOperador.produccion).toList();
+      case 'kpi':
+        return _alertas.where((a) => a.tipo == TipoAlertaOperador.kpi).toList();
       case 'stock':
-        return _alertas
-            .where((a) => a.tipo == TipoAlertaOperador.stock)
-            .toList();
+        return _alertas.where((a) => a.tipo == TipoAlertaOperador.stock).toList();
       default:
         return _alertas;
     }
@@ -115,8 +142,14 @@ class _AlertasScreenState extends State<AlertasScreen> {
                         onTap: (v) => setState(() => _filtro = v)),
                     _FiltroChip(
                         s: s,
-                        label: 'Hold',
-                        value: 'hold',
+                        label: 'Producción',
+                        value: 'produccion',
+                        current: _filtro,
+                        onTap: (v) => setState(() => _filtro = v)),
+                    _FiltroChip(
+                        s: s,
+                        label: 'KPI',
+                        value: 'kpi',
                         current: _filtro,
                         onTap: (v) => setState(() => _filtro = v)),
                     _FiltroChip(
@@ -171,8 +204,8 @@ class _AlertasScreenState extends State<AlertasScreen> {
               return _AlertaListItem(
                 s: s,
                 alerta: a,
-                selected: _seleccionada?.id == a.id,
-                onTap: () => setState(() => _seleccionada = a),
+                selected: _seleccionada?.numero == a.numero,
+                onTap: () => _seleccionar(a),
               );
             },
           ),
@@ -211,8 +244,8 @@ class _AlertasScreenState extends State<AlertasScreen> {
                         return _AlertaListItem(
                           s: s,
                           alerta: a,
-                          selected: _seleccionada?.id == a.id,
-                          onTap: () => setState(() => _seleccionada = a),
+                          selected: _seleccionada?.numero == a.numero,
+                          onTap: () => _seleccionar(a),
                         );
                       },
                     ),
@@ -267,6 +300,30 @@ class _FiltroChip extends StatelessWidget {
   }
 }
 
+/// Colores/íconos por tipo — mismos 3 colores que la web (kpi/views.py::
+/// _COLOR_MAP): stock=dorado, producción=rojo, kpi=morado.
+IconData _iconoPorTipo(TipoAlertaOperador tipo) {
+  switch (tipo) {
+    case TipoAlertaOperador.produccion:
+      return Icons.precision_manufacturing;
+    case TipoAlertaOperador.kpi:
+      return Icons.bar_chart;
+    case TipoAlertaOperador.stock:
+      return Icons.inventory_2;
+  }
+}
+
+Color _colorPorTipo(TipoAlertaOperador tipo) {
+  switch (tipo) {
+    case TipoAlertaOperador.produccion:
+      return AppColors.red;
+    case TipoAlertaOperador.kpi:
+      return AppColors.alertaKpi;
+    case TipoAlertaOperador.stock:
+      return AppColors.gold;
+  }
+}
+
 class _AlertaListItem extends StatelessWidget {
   final AppScale s;
   final AlertaOperador alerta;
@@ -280,46 +337,9 @@ class _AlertaListItem extends StatelessWidget {
     required this.onTap,
   });
 
-  IconData get _icono {
-    switch (alerta.tipo) {
-      case TipoAlertaOperador.hold:
-        return Icons.pause_circle;
-      case TipoAlertaOperador.stock:
-        return Icons.inventory_2;
-      case TipoAlertaOperador.kpi:
-        return Icons.bar_chart;
-      case TipoAlertaOperador.liberado:
-        return Icons.check_circle;
-      case TipoAlertaOperador.scrap:
-        return Icons.delete;
-      case TipoAlertaOperador.mantenimiento:
-        return Icons.build;
-      case TipoAlertaOperador.info:
-        return Icons.info;
-    }
-  }
-
-  Color get _color {
-    switch (alerta.tipo) {
-      case TipoAlertaOperador.hold:
-        return AppColors.gold;
-      case TipoAlertaOperador.stock:
-        return AppColors.red;
-      case TipoAlertaOperador.kpi:
-        return AppColors.turquoise;
-      case TipoAlertaOperador.liberado:
-        return AppColors.green;
-      case TipoAlertaOperador.scrap:
-        return AppColors.red;
-      case TipoAlertaOperador.mantenimiento:
-        return AppColors.turquoise;
-      case TipoAlertaOperador.info:
-        return AppColors.turquoise;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final color = _colorPorTipo(alerta.tipo);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(s.r(10)),
@@ -330,7 +350,9 @@ class _AlertaListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(s.r(10)),
           border: selected
               ? Border.all(color: AppColors.turquoise, width: 1.3)
-              : null,
+              : (alerta.esMiLinea == true
+                  ? Border.all(color: AppColors.green, width: 1.1)
+                  : null),
         ),
         child: Row(
           children: [
@@ -338,17 +360,17 @@ class _AlertaListItem extends StatelessWidget {
               width: s.sp(34),
               height: s.sp(34),
               decoration: BoxDecoration(
-                color: _color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(s.r(8)),
               ),
-              child: Icon(_icono, size: s.ic(18), color: _color),
+              child: Icon(_iconoPorTipo(alerta.tipo), size: s.ic(18), color: color),
             ),
             SizedBox(width: s.sp(10)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(alerta.titulo,
+                  Text(alerta.descripcion,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -357,9 +379,17 @@ class _AlertaListItem extends StatelessWidget {
                             alerta.leida ? FontWeight.normal : FontWeight.w600,
                         color: AppColors.textDark,
                       )),
-                  Text(alerta.tiempo,
-                      style: TextStyle(
-                          fontSize: s.f(11), color: AppColors.textMuted)),
+                  Row(
+                    children: [
+                      Text(alerta.tiempo,
+                          style: TextStyle(
+                              fontSize: s.f(11), color: AppColors.textMuted)),
+                      if (alerta.esMiLinea == true) ...[
+                        SizedBox(width: s.sp(6)),
+                        Icon(Icons.factory, size: s.ic(11), color: AppColors.green),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -377,55 +407,113 @@ class _AlertaListItem extends StatelessWidget {
   }
 }
 
+/// Alertas de tipo producción/kpi vienen con el lote (oblea) del que
+/// salieron — al tocar el detalle expandido se navega directo a su
+/// trazado, igual que ya se hace desde home/scanner. Las de tipo stock no
+/// tienen lote asociado (son de inventario, no de un lote específico), así
+/// que ahí no hay nada que abrir.
+Future<void> _abrirLoteDeAlerta(BuildContext context, int loteNumero) async {
+  final loteProv = context.read<LoteProvider>();
+  final ok = await loteProv.buscarLote(loteNumero.toString());
+  if (!context.mounted) return;
+  if (ok) {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => TrazadoScreen(loteNumero: loteNumero),
+    ));
+  }
+}
+
 class _AlertaDetalle extends StatelessWidget {
   final AppScale s;
   final AlertaOperador alerta;
   const _AlertaDetalle({required this.s, required this.alerta});
 
+  String get _etiquetaTipo {
+    switch (alerta.tipo) {
+      case TipoAlertaOperador.produccion:
+        return 'Producción';
+      case TipoAlertaOperador.kpi:
+        return 'KPI';
+      case TipoAlertaOperador.stock:
+        return 'Stock';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(s.sp(16)),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
+    final color = _colorPorTipo(alerta.tipo);
+    final tieneLote = alerta.loteId != null;
+    return Material(
+      color: AppColors.bgCard,
+      borderRadius: BorderRadius.circular(s.r(12)),
+      child: InkWell(
         borderRadius: BorderRadius.circular(s.r(12)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(alerta.titulo,
-              style: TextStyle(
-                  fontSize: s.f(16),
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark)),
-          SizedBox(height: s.sp(6)),
-          Text(alerta.cuerpo,
-              style: TextStyle(
-                  fontSize: s.f(13), color: AppColors.textDark, height: 1.5)),
-          if (alerta.loteFolio != null) ...[
-            SizedBox(height: s.sp(12)),
-            Container(
-              padding: EdgeInsets.all(s.sp(10)),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7FAFC),
-                borderRadius: BorderRadius.circular(s.r(8)),
-              ),
-              child: Row(
+        onTap: tieneLote ? () => _abrirLoteDeAlerta(context, alerta.loteId!) : null,
+        child: Padding(
+          padding: EdgeInsets.all(s.sp(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text('Lote: ',
-                      style: TextStyle(
-                          fontSize: s.f(12), color: AppColors.textMuted)),
-                  Text(alerta.loteFolio!,
-                      style: TextStyle(
-                          fontSize: s.f(13),
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace')),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: s.sp(8), vertical: s.sp(3)),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(s.r(4)),
+                    ),
+                    child: Text(_etiquetaTipo,
+                        style: TextStyle(
+                            fontSize: s.f(11),
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white)),
+                  ),
+                  if (alerta.esMiLinea == true) ...[
+                    SizedBox(width: s.sp(8)),
+                    Icon(Icons.factory, size: s.ic(13), color: AppColors.green),
+                    SizedBox(width: s.sp(3)),
+                    Text('Tu línea',
+                        style: TextStyle(
+                            fontSize: s.f(11),
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.green)),
+                  ] else if (alerta.lineaNombre != null) ...[
+                    SizedBox(width: s.sp(8)),
+                    Text(alerta.lineaNombre!,
+                        style: TextStyle(fontSize: s.f(11), color: AppColors.textMuted)),
+                  ],
                 ],
               ),
-            ),
-          ],
-        ],
+              SizedBox(height: s.sp(10)),
+              Text(alerta.descripcion,
+                  style: TextStyle(
+                      fontSize: s.f(15),
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                      height: 1.4)),
+              SizedBox(height: s.sp(6)),
+              Text(alerta.tiempo,
+                  style: TextStyle(fontSize: s.f(12), color: AppColors.textMuted)),
+              if (tieneLote) ...[
+                SizedBox(height: s.sp(12)),
+                Row(
+                  children: [
+                    Text('Ver lote',
+                        style: TextStyle(
+                            fontSize: s.f(12.5),
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.turquoise)),
+                    SizedBox(width: s.sp(2)),
+                    Icon(Icons.chevron_right, size: s.ic(16), color: AppColors.turquoise),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
 }
+
+

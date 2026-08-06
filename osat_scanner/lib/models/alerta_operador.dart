@@ -1,61 +1,84 @@
-enum TipoAlertaOperador { hold, stock, kpi, liberado, scrap, mantenimiento, info }
+/// Mismos 3 tipos que clasifica el backend (osat_tracer/api_kpi/views.py::
+/// AlertasOperadorAPIView, misma regla que client/kpi/views.py::_build_alertas
+/// en la web): 'kpi' si la alerta viene de un Registro_Kpi, 'produccion' si
+/// viene de un Paso_Realizado, si no 'stock'.
+enum TipoAlertaOperador { stock, produccion, kpi }
 
 TipoAlertaOperador tipoAlertaFromString(String? raw) {
-  final s = (raw ?? '').toLowerCase();
-  switch (s) {
-    case 'hold':
-      return TipoAlertaOperador.hold;
-    case 'stock':
-      return TipoAlertaOperador.stock;
+  switch ((raw ?? '').toLowerCase()) {
+    case 'produccion':
+      return TipoAlertaOperador.produccion;
     case 'kpi':
       return TipoAlertaOperador.kpi;
-    case 'liberado':
-      return TipoAlertaOperador.liberado;
-    case 'scrap':
-      return TipoAlertaOperador.scrap;
-    case 'mantenimiento':
-      return TipoAlertaOperador.mantenimiento;
     default:
-      return TipoAlertaOperador.info;
+      return TipoAlertaOperador.stock;
   }
 }
 
 class AlertaOperador {
-  final int id;
+  final int numero;
   final TipoAlertaOperador tipo;
-  final String titulo;
-  final String cuerpo;
-  final String tiempo;
+  final String descripcion;
+  final String fecha;
+  final String hora;
   final bool leida;
-  final String? loteFolio;
-  final int? lotePk;
+  final String? lineaCodigo;
+  final String? lineaNombre;
+  final bool? esMiLinea;
+  final int prioridad;
+  final int? loteId;
 
   AlertaOperador({
-    required this.id,
+    required this.numero,
     required this.tipo,
-    required this.titulo,
-    required this.cuerpo,
-    required this.tiempo,
+    required this.descripcion,
+    required this.fecha,
+    required this.hora,
     required this.leida,
-    this.loteFolio,
-    this.lotePk,
+    required this.prioridad,
+    this.lineaCodigo,
+    this.lineaNombre,
+    this.esMiLinea,
+    this.loteId,
   });
 
-  /// El endpoint /v1/list/alertas/ del backend solo expone hoy
-  /// 'descripcion' y 'estadoAlerta' (no pk, tipo, ni lote asociado), así
-  /// que 'leida' se aproxima con estadoAlerta ('resue' = resuelta) y el
-  /// id usa el índice de la lista mientras el backend no exponga el pk.
-  factory AlertaOperador.fromJson(Map<String, dynamic> json, {int indice = 0}) {
-    final estadoAlerta = json['estadoAlerta']?.toString().toLowerCase() ?? '';
+  String get tiempo {
+    if (fecha.isNotEmpty && hora.isNotEmpty) return '$fecha $hora';
+    return fecha.isNotEmpty ? fecha : (hora.isNotEmpty ? hora : '—');
+  }
+
+  AlertaOperador copyWith({bool? leida}) {
     return AlertaOperador(
-      id: json['pk'] ?? json['numero'] ?? indice,
-      tipo: tipoAlertaFromString(json['tipo']),
-      titulo: json['titulo'] ?? json['descripcion'] ?? '',
-      cuerpo: json['cuerpo'] ?? json['descripcion'] ?? '',
-      tiempo: json['tiempo'] ?? '—',
-      leida: json['leida'] ?? estadoAlerta.contains('resue'),
-      loteFolio: json['lote_folio'],
-      lotePk: json['lote_pk'],
+      numero: numero,
+      tipo: tipo,
+      descripcion: descripcion,
+      fecha: fecha,
+      hora: hora,
+      leida: leida ?? this.leida,
+      prioridad: prioridad,
+      lineaCodigo: lineaCodigo,
+      lineaNombre: lineaNombre,
+      esMiLinea: esMiLinea,
+      loteId: loteId,
+    );
+  }
+
+  /// El endpoint /v1/list/alertas_operador/ ya viene clasificado, priorizado
+  /// y con la línea resuelta desde el backend — no hay que adivinar nada
+  /// del lado del cliente.
+  factory AlertaOperador.fromJson(Map<String, dynamic> json) {
+    return AlertaOperador(
+      numero: json['numero'] as int? ?? 0,
+      tipo: tipoAlertaFromString(json['tipo'] as String?),
+      descripcion: json['descripcion'] as String? ?? '',
+      fecha: json['fecha'] as String? ?? '',
+      hora: json['hora'] as String? ?? '',
+      leida: json['leida'] == true,
+      prioridad: json['prioridad'] as int? ?? 0,
+      lineaCodigo: json['linea_codigo'] as String?,
+      lineaNombre: json['linea_nombre'] as String?,
+      esMiLinea: json['es_mi_linea'] as bool?,
+      loteId: json['oblea_id'] as int?,
     );
   }
 }

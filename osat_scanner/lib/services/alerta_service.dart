@@ -3,19 +3,23 @@ import '../utils/constants.dart';
 import 'api_client.dart';
 
 class AlertaService {
-  static Future<List<AlertaOperador>> listar() async {
-    final data = await ApiClient.get(ApiConfig.alertas);
+  /// Pasar el número de empleado del operador logueado para que el backend
+  /// calcule 'es_mi_linea' y ordene sus propias alertas primero — sin
+  /// empleadoNumero, el backend regresa la lista sin ese cálculo (útil
+  /// solo para debug).
+  static Future<List<AlertaOperador>> listar({int? empleadoNumero}) async {
+    final url = empleadoNumero != null
+        ? '${ApiConfig.alertasOperador}?empleado=$empleadoNumero'
+        : ApiConfig.alertasOperador;
+    final data = await ApiClient.get(url);
     final lista = data as List;
     return [
-      for (var i = 0; i < lista.length; i++)
-        AlertaOperador.fromJson(lista[i] as Map<String, dynamic>, indice: i),
+      for (final item in lista)
+        AlertaOperador.fromJson(item as Map<String, dynamic>),
     ];
   }
 
-  /// El modelo Alerta del backend todavía no tiene un campo "leida"
-  /// (solo 'estadoAlerta': resuelta/sin resolver) ni expone el pk en el
-  /// listado, así que esto queda pendiente de soporte real del backend.
-  static Future<void> marcarLeida(int id) async {
-    await ApiClient.patch(ApiConfig.updateAlerta(id), {'estadoAlerta': 'resue'});
+  static Future<void> marcarLeida(int numero) async {
+    await ApiClient.patch(ApiConfig.updateAlerta(numero), {'estadoAlerta': 'resue'});
   }
 }
