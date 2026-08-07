@@ -29,8 +29,8 @@ class BadgeEstadoLote extends StatelessWidget {
         label = 'Rechazado';
         break;
       case EstadoLote.hold:
-        bg = AppColors.badgeYellowBg;
-        text = AppColors.badgeYellowText;
+        bg = AppColors.badgeOrangeBg;
+        text = AppColors.badgeOrangeText;
         label = 'En Hold';
         break;
       case EstadoLote.pendiente:
@@ -63,9 +63,14 @@ class BadgeEstadoOrden extends StatelessWidget {
         label = 'Aprobado';
         break;
       case EstadoOrden.hold:
-        bg = AppColors.badgeYellowBg;
-        text = AppColors.badgeYellowText;
+        bg = AppColors.badgeOrangeBg;
+        text = AppColors.badgeOrangeText;
         label = 'En Hold';
+        break;
+      case EstadoOrden.rechazada:
+        bg = AppColors.badgeRedBg;
+        text = AppColors.badgeRedText;
+        label = 'Rechazada';
         break;
       case EstadoOrden.pendiente:
         bg = AppColors.badgeGrayBg;
@@ -97,8 +102,8 @@ class BadgeEstadoEtapa extends StatelessWidget {
         label = 'En curso';
         break;
       case EstadoEtapa.hold:
-        bg = AppColors.badgeYellowBg;
-        text = AppColors.badgeYellowText;
+        bg = AppColors.badgeOrangeBg;
+        text = AppColors.badgeOrangeText;
         label = 'Hold';
         break;
       case EstadoEtapa.rechazado:
