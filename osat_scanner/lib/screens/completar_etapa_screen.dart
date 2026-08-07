@@ -110,6 +110,15 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
       }
     }
 
+    if (_resultado == 'enhol' && _obsCtrl.text.trim().isEmpty) {
+      OsatToast.show(
+        context,
+        message: 'Describe el motivo del Hold antes de continuar.',
+        tipo: ToastTipo.warning,
+      );
+      return;
+    }
+
     final loteProv = context.read<LoteProvider>();
     bool ok = false;
 
@@ -264,52 +273,6 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Resultado *',
-                            style: TextStyle(
-                                fontSize: s.f(13),
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textDark)),
-                        SizedBox(height: s.sp(8)),
-                        Row(
-                          children: [
-                            _ResultadoOption(
-                              s: s,
-                              label: 'Aprobado',
-                              color: AppColors.green,
-                              selected: _resultado == 'compl',
-                              onTap: () =>
-                                  setState(() => _resultado = 'compl'),
-                            ),
-                            SizedBox(width: s.sp(8)),
-                            _ResultadoOption(
-                              s: s,
-                              label: 'Rechazado',
-                              color: AppColors.red,
-                              selected: _resultado == 'nocom',
-                              habilitado: habilitarRechazo,
-                              onTap: () =>
-                                  setState(() => _resultado = 'nocom'),
-                            ),
-                            SizedBox(width: s.sp(8)),
-                            _ResultadoOption(
-                              s: s,
-                              label: 'Hold',
-                              color: AppColors.gold,
-                              selected: _resultado == 'enhol',
-                              onTap: () =>
-                                  setState(() => _resultado = 'enhol'),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: s.sp(6)),
-                        Text(
-                          '"Rechazado" se habilita cuando el yield global del '
-                          'lote caería por debajo del 95% '
-                          '(scrap mayor a ${(lote.diesActivos - 0.95 * lote.diesIniciales).clamp(0, double.infinity).floor()} unidades).',
-                          style: TextStyle(
-                              fontSize: s.f(11), color: AppColors.textMuted),
-                        ),
-                        SizedBox(height: s.sp(18)),
                         Text('Unidades con defecto',
                             style: TextStyle(
                                 fontSize: s.f(13),
@@ -348,27 +311,145 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                             ),
                           ],
                         ),
+                        SizedBox(height: s.sp(16)),
+                        // Yield del lote — actual, proyectado y umbral, siempre visible
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: s.sp(14), vertical: s.sp(12)),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7FAFC),
+                            border: Border.all(color: AppColors.borderCard),
+                            borderRadius: BorderRadius.circular(s.r(10)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _YieldStat(
+                                s: s,
+                                label: 'Actual',
+                                value:
+                                    '${lote.yieldPct.toStringAsFixed(1)}%',
+                                color: AppColors.textDark,
+                              ),
+                              _YieldStat(
+                                s: s,
+                                label: 'Proyectado',
+                                value:
+                                    '${yieldDespuesRechazo.toStringAsFixed(1)}%',
+                                color: habilitarRechazo
+                                    ? AppColors.red
+                                    : (yieldDespuesRechazo < 97
+                                        ? AppColors.gold
+                                        : AppColors.green),
+                              ),
+                              _YieldStat(
+                                s: s,
+                                label: 'Umbral mínimo',
+                                value: '95%',
+                                color: AppColors.textMuted,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (habilitarRechazo) ...[
+                          SizedBox(height: s.sp(10)),
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                                horizontal: s.sp(12), vertical: s.sp(10)),
+                            decoration: BoxDecoration(
+                              color: AppColors.badgeYellowBg,
+                              borderRadius: BorderRadius.circular(s.r(8)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.warning_amber_rounded,
+                                    size: s.ic(16),
+                                    color: AppColors.badgeYellowText),
+                                SizedBox(width: s.sp(8)),
+                                Expanded(
+                                  child: Text(
+                                    'Con este scrap el yield cae por debajo del umbral: la orden completa entrará en Hold automáticamente al confirmar, y ya puedes marcar esta etapa como Rechazado si corresponde.',
+                                    style: TextStyle(
+                                        fontSize: s.f(11.5),
+                                        color: AppColors.badgeYellowText),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         SizedBox(height: s.sp(18)),
-                        Text('Observaciones (opcional)',
+                        Text('Resultado *',
                             style: TextStyle(
                                 fontSize: s.f(13),
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textDark)),
+                        SizedBox(height: s.sp(8)),
+                        Row(
+                          children: [
+                            _ResultadoOption(
+                              s: s,
+                              label: 'Aprobado',
+                              color: AppColors.green,
+                              selected: _resultado == 'compl',
+                              onTap: () =>
+                                  setState(() => _resultado = 'compl'),
+                            ),
+                            SizedBox(width: s.sp(8)),
+                            _ResultadoOption(
+                              s: s,
+                              label: 'Rechazado',
+                              color: AppColors.red,
+                              selected: _resultado == 'nocom',
+                              habilitado: habilitarRechazo,
+                              onTap: () =>
+                                  setState(() => _resultado = 'nocom'),
+                            ),
+                            SizedBox(width: s.sp(8)),
+                            _ResultadoOption(
+                              s: s,
+                              label: 'Hold',
+                              color: AppColors.gold,
+                              selected: _resultado == 'enhol',
+                              onTap: () =>
+                                  setState(() => _resultado = 'enhol'),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: s.sp(18)),
+                        Text(
+                          _resultado == 'enhol'
+                              ? 'Motivo del Hold *'
+                              : 'Observaciones (opcional)',
+                          style: TextStyle(
+                              fontSize: s.f(13),
+                              fontWeight: FontWeight.w600,
+                              color: _resultado == 'enhol'
+                                  ? AppColors.gold
+                                  : AppColors.textDark),
+                        ),
                         SizedBox(height: s.sp(8)),
                         TextField(
                           controller: _obsCtrl,
                           maxLines: 3,
                           style: TextStyle(fontSize: s.f(14)),
                           decoration: InputDecoration(
-                            hintText: 'Escribe observaciones sobre esta etapa...',
+                            hintText: _resultado == 'enhol'
+                                ? 'Describe el motivo del Hold…'
+                                : 'Escribe observaciones sobre esta etapa...',
                             hintStyle: TextStyle(
                                 fontSize: s.f(13), color: AppColors.textMuted),
                             filled: true,
                             fillColor: const Color(0xFFF7FAFC),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(s.r(8)),
-                              borderSide: const BorderSide(
-                                  color: AppColors.borderCard),
+                              borderSide: BorderSide(
+                                  color: _resultado == 'enhol'
+                                      ? AppColors.gold
+                                      : AppColors.borderCard),
                             ),
                           ),
                         ),
@@ -537,6 +618,38 @@ class _ResultadoOption extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _YieldStat extends StatelessWidget {
+  final AppScale s;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _YieldStat({
+    required this.s,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label.toUpperCase(),
+            style: TextStyle(
+                fontSize: s.f(9.5),
+                color: AppColors.textMuted,
+                letterSpacing: .3)),
+        SizedBox(height: s.sp(2)),
+        Text(value,
+            style: TextStyle(
+                fontSize: s.f(16), fontWeight: FontWeight.bold, color: color)),
+      ],
     );
   }
 }
