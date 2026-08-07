@@ -1,11 +1,15 @@
 // Mismo vocabulario que Estado_Orden en la web (client/produccion/views.py
-// ::_estado_orden_display): abier/proce/cerra/enhol. "Aprobado" es la
+// ::_estado_orden_display): abier/proce/cerra/enhol/recha. "Aprobado" es la
 // palabra real que usa la web para una orden cerrada (a diferencia de un
-// lote, que usa "Terminado").
-enum EstadoOrden { pendiente, enProceso, aprobado, hold }
+// lote, que usa "Terminado"). 'recha' es el rechazo manual de una orden que
+// estaba en Hold (distinto del "rechazado" derivado que la web calcula
+// cuando una orden cerrada terminó con todos sus lotes rechazados — para
+// el operador ambos se ven igual).
+enum EstadoOrden { pendiente, enProceso, aprobado, hold, rechazada }
 
 EstadoOrden estadoOrdenFromString(String? raw) {
   final s = (raw ?? '').toLowerCase();
+  if (s.contains('recha')) return EstadoOrden.rechazada;
   if (s.contains('enhol') || s.contains('hold')) return EstadoOrden.hold;
   if (s.contains('cerra')) return EstadoOrden.aprobado;
   if (s.contains('proce') || s.contains('activo')) return EstadoOrden.enProceso;

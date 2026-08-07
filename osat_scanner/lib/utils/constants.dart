@@ -33,6 +33,11 @@ class AppColors {
   static const badgeBlueText = Color(0xFF006064);
   static const badgeGrayBg = Color(0xFFE9ECEF);
   static const badgeGrayText = Color(0xFF495057);
+  // Hold — antes compartía el amarillo de "en proceso"; ahora tiene su
+  // propio color (mismo naranja/gold que AppColors.gold) para no confundir
+  // ambos estados en las listas.
+  static const badgeOrangeBg = Color(0xFFFEF3E2);
+  static const badgeOrangeText = Color(0xFF8A5C00);
 }
 
 class ApiConfig {
