@@ -31,6 +31,7 @@ class Lote {
   final List<Etapa> etapas;
   final String? fechaRegistro;
   final String? holdMotivo;
+  final String? ordenEstadoRaw;
 
   Lote({
     required this.numero,
@@ -45,6 +46,7 @@ class Lote {
     required this.etapas,
     this.fechaRegistro,
     this.holdMotivo,
+    this.ordenEstadoRaw,
   });
 
   double get yieldPct {
@@ -82,9 +84,18 @@ class Lote {
   /// seguir avanzando por más etapas.
   bool get rechazado => estado == EstadoLote.rechazado;
 
+  /// La ORDEN completa puede estar en Hold/Rechazada aunque este lote
+  /// individual siga 'proce' (ver client/produccion/views.py::_completar_etapa
+  /// y osat_tracer/api_produccion/serializers.py::get_orden_estado) — sin
+  /// este chequeo el móvil deja intentar completar la etapa y el backend
+  /// la rechaza con un 400 tardío que antes ni se mostraba bien al operador.
+  bool get ordenEnHold => (ordenEstadoRaw ?? '').toLowerCase() == 'enhol';
+  bool get ordenRechazada => (ordenEstadoRaw ?? '').toLowerCase() == 'recha';
+
   bool get puedeCompletarEtapa =>
-      !enHold && !rechazado && etapaActual != null;
-  bool get puedePonerEnHold => !enHold && !rechazado && etapaActual != null;
+      !enHold && !rechazado && !ordenEnHold && !ordenRechazada && etapaActual != null;
+  bool get puedePonerEnHold =>
+      !enHold && !rechazado && !ordenEnHold && !ordenRechazada && etapaActual != null;
 
   factory Lote.fromJson(Map<String, dynamic> json) {
     final etapasJson = (json['etapas'] as List?) ?? [];
@@ -147,6 +158,7 @@ class Lote {
       etapas: etapas,
       fechaRegistro: json['fecha_registro'],
       holdMotivo: json['hold_motivo'],
+      ordenEstadoRaw: json['orden_estado']?.toString(),
     );
   }
 }

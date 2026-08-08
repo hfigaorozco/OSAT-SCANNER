@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/lote_provider.dart';
 import '../utils/constants.dart';
+import '../widgets/badge_estado.dart';
 import '../widgets/osat_bottom_nav.dart';
 import '../widgets/osat_toast.dart';
 import 'home_screen.dart';
@@ -190,20 +191,7 @@ class PerfilScreen extends StatelessWidget {
               fontWeight: FontWeight.bold),
         ),
         SizedBox(height: s.sp(4)),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: s.sp(12), vertical: s.sp(4)),
-          decoration: BoxDecoration(
-            color: AppColors.green.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            empleado?.rol ?? 'Operador',
-            style: TextStyle(
-                color: AppColors.green,
-                fontSize: s.f(12.5),
-                fontWeight: FontWeight.w600),
-          ),
-        ),
+        RolBadge(rol: empleado?.rol ?? 'Operador'),
         SizedBox(height: s.sp(24)),
         _InfoCard(
           s: s,
@@ -213,14 +201,14 @@ class PerfilScreen extends StatelessWidget {
                 icon: Icons.badge_outlined,
                 label: 'Usuario empresarial',
                 value: empleado?.username ?? '—'),
-            const Divider(height: 1),
+            const Divider(height: 1, color: Colors.white12),
             _InfoRow(
                 s: s,
                 icon: Icons.email_outlined,
                 label: 'Correo',
                 value: empleado?.email ?? '—'),
             if (empleado?.lineaNombre != null) ...[
-              const Divider(height: 1),
+              const Divider(height: 1, color: Colors.white12),
               _InfoRow(
                   s: s,
                   icon: Icons.factory_outlined,
@@ -295,15 +283,7 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: s.sp(16), vertical: s.sp(4)),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(s.r(12)),
-      ),
-      child: Column(children: children),
-    );
+    return Column(children: children);
   }
 }
 
@@ -336,7 +316,7 @@ class _InfoRow extends StatelessWidget {
               style: TextStyle(
                   fontSize: s.f(13.5),
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textDark)),
+                  color: Colors.white)),
         ],
       ),
     );

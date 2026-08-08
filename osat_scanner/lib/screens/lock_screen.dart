@@ -17,7 +17,11 @@ class LockScreen extends StatefulWidget {
 
 class _LockScreenState extends State<LockScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _passCtrl = TextEditingController();
+  TextEditingController _passCtrl = TextEditingController();
+  // Se incrementa cada vez que se recrea _passCtrl, para forzar (vía
+  // ValueKey en el TextFormField) que Flutter destruya y reconstruya el
+  // EditableText nativo — ver nota completa en _submit().
+  int _passFieldGen = 0;
   bool _obscure = true;
 
   @override
@@ -30,7 +34,20 @@ class _LockScreenState extends State<LockScreen> {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     await auth.confirmIdentity(_passCtrl.text);
-    if (mounted) _passCtrl.clear();
+    if (!mounted) return;
+    // No basta con _passCtrl.clear(): el teclado (Gboard y otros) guarda
+    // su propio historial de "recién borrado" ligado a la sesión de ese
+    // EditText nativo, y lo puede reinsertar al volver a escribir aunque
+    // el texto del controller ya esté vacío — por eso antes seguía
+    // repitiéndose lo borrado pese a autocorrect/enableSuggestions en
+    // false. Recrear el controller Y cambiar la key del campo obliga a
+    // Flutter a destruir esa conexión nativa por completo y abrir una
+    // sesión de teclado nueva y limpia.
+    setState(() {
+      _passCtrl.dispose();
+      _passCtrl = TextEditingController();
+      _passFieldGen++;
+    });
   }
 
   Future<void> _cerrarSesion() async {
@@ -108,9 +125,25 @@ class _LockScreenState extends State<LockScreen> {
                       ),
                       SizedBox(height: s.sp(32)),
                       TextFormField(
+                        key: ValueKey(_passFieldGen),
                         controller: _passCtrl,
                         autofocus: true,
                         obscureText: _obscure,
+                        // El teclado de Android (Gboard) reinserta texto
+                        // recién borrado: no solo su barra de sugerencias
+                        // (enableSuggestions) sino también un "aprendizaje"
+                        // interno del campo que reinyecta lo último escrito
+                        // al volver a teclear después de borrar a mano —
+                        // reproducido en pruebas: escribir "HelloW", borrarlo
+                        // con retroceso, escribir "abc" y que el campo quede
+                        // en "HelloWabc". keyboardType.visiblePassword +
+                        // enableIMEPersonalizedLearning:false apagan esa
+                        // capa de aprendizaje del IME, no solo la UI de
+                        // sugerencias.
+                        keyboardType: TextInputType.visiblePassword,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        enableIMEPersonalizedLearning: false,
                         style: TextStyle(color: Colors.white, fontSize: s.f(15)),
                         decoration: InputDecoration(
                           labelText: 'Contraseña',

@@ -164,6 +164,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
           TextFormField(
             controller: _userCtrl,
+            // Ver nota en lock_screen.dart: no basta con enableSuggestions
+            // en false para que el teclado no reinserte texto ya borrado —
+            // hace falta también enableIMEPersonalizedLearning en false.
+            autocorrect: false,
+            enableSuggestions: false,
+            enableIMEPersonalizedLearning: false,
             style: TextStyle(color: Colors.white, fontSize: s.f(15)),
             decoration:
                 _inputDecoration(s, 'Usuario empresarial', Icons.person_outline),
@@ -174,6 +180,10 @@ class _LoginScreenState extends State<LoginScreen> {
           TextFormField(
             controller: _passCtrl,
             obscureText: _obscure,
+            keyboardType: TextInputType.visiblePassword,
+            autocorrect: false,
+            enableSuggestions: false,
+            enableIMEPersonalizedLearning: false,
             style: TextStyle(color: Colors.white, fontSize: s.f(15)),
             decoration: _inputDecoration(
               s,

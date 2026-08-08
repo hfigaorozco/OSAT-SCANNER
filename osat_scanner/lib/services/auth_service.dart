@@ -35,11 +35,24 @@ class AuthService {
   /// RFM01 — Login con usuario empresarial y contraseña.
   /// Devuelve el Empleado autenticado y guarda el token.
   static Future<Empleado> login(String username, String password) async {
-    final data = await ApiClient.post(
-      ApiConfig.login,
-      {'username': username, 'password': password},
-      auth: false,
-    );
+    dynamic data;
+    try {
+      data = await ApiClient.post(
+        ApiConfig.login,
+        {'username': username, 'password': password},
+        auth: false,
+      );
+    } on ApiException catch (e) {
+      // obtain_auth_token (DRF) responde 400 con el mensaje de fábrica
+      // "Unable to log in with provided credentials." — en inglés y sin
+      // decir qué salió mal. Se traduce aquí, no en ApiClient, porque es
+      // un mensaje específico de este endpoint de login.
+      if (e.statusCode == 400) {
+        throw ApiException('Usuario o contraseña incorrectos.',
+            statusCode: e.statusCode);
+      }
+      rethrow;
+    }
 
     final token = data['token'] as String?;
     if (token == null) {

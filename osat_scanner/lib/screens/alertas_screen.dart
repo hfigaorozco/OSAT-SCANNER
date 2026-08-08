@@ -194,8 +194,12 @@ class _AlertasScreenState extends State<AlertasScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // La lista se queda con más espacio horizontal para que las
+        // descripciones se lean casi completas sin cortarse; el panel de
+        // detalle a la derecha es más angosto pero muestra más
+        // información una vez que se selecciona una alerta.
         Expanded(
-          flex: 2,
+          flex: 3,
           child: ListView.separated(
             itemCount: _filtradas.length,
             separatorBuilder: (_, __) => SizedBox(height: s.sp(8)),
@@ -212,7 +216,7 @@ class _AlertasScreenState extends State<AlertasScreen> {
         ),
         SizedBox(width: s.sp(20)),
         Expanded(
-          flex: 3,
+          flex: 2,
           child: _seleccionada != null
               ? _AlertaDetalle(s: s, alerta: _seleccionada!)
               : const SizedBox.shrink(),
@@ -340,19 +344,18 @@ class _AlertaListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _colorPorTipo(alerta.tipo);
+    // Fila plana sobre el fondo oscuro, sin borde de ningún color — el
+    // estado seleccionado se distingue solo con un tinte de fondo.
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(s.r(10)),
       child: Container(
         padding: EdgeInsets.all(s.sp(12)),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE0F7FA) : AppColors.bgCard,
+          color: selected
+              ? AppColors.turquoise.withValues(alpha: 0.12)
+              : Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(s.r(10)),
-          border: selected
-              ? Border.all(color: AppColors.turquoise, width: 1.3)
-              : (alerta.esMiLinea == true
-                  ? Border.all(color: AppColors.green, width: 1.1)
-                  : null),
         ),
         child: Row(
           children: [
@@ -360,7 +363,7 @@ class _AlertaListItem extends StatelessWidget {
               width: s.sp(34),
               height: s.sp(34),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(s.r(8)),
               ),
               child: Icon(_iconoPorTipo(alerta.tipo), size: s.ic(18), color: color),
@@ -371,13 +374,13 @@ class _AlertaListItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(alerta.descripcion,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: s.f(13),
                         fontWeight:
                             alerta.leida ? FontWeight.normal : FontWeight.w600,
-                        color: AppColors.textDark,
+                        color: Colors.white,
                       )),
                   Row(
                     children: [
@@ -443,74 +446,133 @@ class _AlertaDetalle extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _colorPorTipo(alerta.tipo);
     final tieneLote = alerta.loteId != null;
-    return Material(
-      color: AppColors.bgCard,
-      borderRadius: BorderRadius.circular(s.r(12)),
-      child: InkWell(
+    return Container(
+      padding: EdgeInsets.all(s.sp(16)),
+      decoration: BoxDecoration(
+        color: AppColors.bgTopbar,
         borderRadius: BorderRadius.circular(s.r(12)),
-        onTap: tieneLote ? () => _abrirLoteDeAlerta(context, alerta.loteId!) : null,
-        child: Padding(
-          padding: EdgeInsets.all(s.sp(16)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: s.sp(8), vertical: s.sp(3)),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(s.r(4)),
-                    ),
-                    child: Text(_etiquetaTipo,
-                        style: TextStyle(
-                            fontSize: s.f(11),
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white)),
-                  ),
-                  if (alerta.esMiLinea == true) ...[
-                    SizedBox(width: s.sp(8)),
-                    Icon(Icons.factory, size: s.ic(13), color: AppColors.green),
-                    SizedBox(width: s.sp(3)),
-                    Text('Tu línea',
-                        style: TextStyle(
-                            fontSize: s.f(11),
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.green)),
-                  ] else if (alerta.lineaNombre != null) ...[
-                    SizedBox(width: s.sp(8)),
-                    Text(alerta.lineaNombre!,
-                        style: TextStyle(fontSize: s.f(11), color: AppColors.textMuted)),
-                  ],
-                ],
-              ),
-              SizedBox(height: s.sp(10)),
-              Text(alerta.descripcion,
-                  style: TextStyle(
-                      fontSize: s.f(15),
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                      height: 1.4)),
-              SizedBox(height: s.sp(6)),
-              Text(alerta.tiempo,
-                  style: TextStyle(fontSize: s.f(12), color: AppColors.textMuted)),
-              if (tieneLote) ...[
-                SizedBox(height: s.sp(12)),
-                Row(
-                  children: [
-                    Text('Ver lote',
-                        style: TextStyle(
-                            fontSize: s.f(12.5),
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.turquoise)),
-                    SizedBox(width: s.sp(2)),
-                    Icon(Icons.chevron_right, size: s.ic(16), color: AppColors.turquoise),
-                  ],
+              Container(
+                padding:
+                    EdgeInsets.symmetric(horizontal: s.sp(8), vertical: s.sp(3)),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(s.r(4)),
                 ),
-              ],
+                child: Text(_etiquetaTipo,
+                    style: TextStyle(
+                        fontSize: s.f(11),
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white)),
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    EdgeInsets.symmetric(horizontal: s.sp(8), vertical: s.sp(3)),
+                decoration: BoxDecoration(
+                  color: (alerta.leida ? AppColors.green : AppColors.red)
+                      .withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(s.r(4)),
+                ),
+                child: Text(alerta.leida ? 'Resuelta' : 'Sin resolver',
+                    style: TextStyle(
+                        fontSize: s.f(11),
+                        fontWeight: FontWeight.w600,
+                        color: alerta.leida ? AppColors.green : AppColors.red)),
+              ),
             ],
           ),
-        ),
+          SizedBox(height: s.sp(12)),
+          Text(alerta.descripcion,
+              style: TextStyle(
+                  fontSize: s.f(15),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.4)),
+          SizedBox(height: s.sp(16)),
+          _DetalleRow(s: s, icon: Icons.tag, label: 'Alerta', value: '#${alerta.numero}'),
+          _DetalleRow(s: s, icon: Icons.calendar_today_outlined, label: 'Fecha', value: alerta.fecha.isNotEmpty ? alerta.fecha : '—'),
+          _DetalleRow(s: s, icon: Icons.access_time, label: 'Hora', value: alerta.hora.isNotEmpty ? alerta.hora : '—'),
+          if (alerta.lineaNombre != null)
+            _DetalleRow(
+              s: s,
+              icon: Icons.factory_outlined,
+              label: 'Línea',
+              value: alerta.esMiLinea == true
+                  ? '${alerta.lineaNombre} (tu línea)'
+                  : alerta.lineaNombre!,
+              valueColor: alerta.esMiLinea == true ? AppColors.green : null,
+            ),
+          if (tieneLote) ...[
+            SizedBox(height: s.sp(14)),
+            SizedBox(
+              width: double.infinity,
+              height: s.h(40),
+              child: OutlinedButton.icon(
+                onPressed: () => _abrirLoteDeAlerta(context, alerta.loteId!),
+                icon: Icon(Icons.visibility_outlined, size: s.ic(16)),
+                label: Text('Ver lote', style: TextStyle(fontSize: s.f(12.5))),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.turquoise,
+                  side: const BorderSide(color: AppColors.turquoise),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DetalleRow extends StatelessWidget {
+  final AppScale s;
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _DetalleRow({
+    required this.s,
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: s.sp(10)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: s.ic(15), color: AppColors.textMuted),
+          SizedBox(width: s.sp(8)),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(fontSize: s.f(11.5), color: AppColors.textMuted)),
+          ),
+          Flexible(
+            flex: 2,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: s.f(12.5),
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

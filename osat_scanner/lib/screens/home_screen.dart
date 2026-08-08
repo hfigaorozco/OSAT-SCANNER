@@ -178,13 +178,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Hola, ${empleado?.nombre ?? 'Operador'}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: s.f(19),
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Hola, ${empleado?.nombre ?? 'Operador'}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: s.f(19),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(width: s.sp(8)),
+                              RolBadge(rol: empleado?.rol ?? 'Operador'),
+                            ],
                           ),
                           if (empleado?.lineaNombre != null)
                             Text(
@@ -299,7 +306,8 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.green,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.memory, color: Colors.white, size: size * 0.48),
+            child: Icon(Icons.qr_code_scanner_rounded,
+                color: Colors.white, size: size * 0.48),
           ),
         ),
         SizedBox(height: s.sp(14)),
@@ -319,6 +327,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _panelBusqueda(AppScale s) {
+    final alturaCampo = s.h(44);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(s.sp(12)),
@@ -326,52 +335,73 @@ class _HomeScreenState extends State<HomeScreen> {
         color: AppColors.bgTopbar,
         borderRadius: BorderRadius.circular(s.r(10)),
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _codigoCtrl,
-                  style:
-                      TextStyle(color: AppColors.textDark, fontSize: s.f(13)),
-                  decoration: InputDecoration(
-                    hintText: 'Código del lote o de la orden',
-                    hintStyle: TextStyle(
-                        color: AppColors.textMuted, fontSize: s.f(13)),
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(
-                        horizontal: s.sp(10), vertical: s.sp(10)),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(s.r(8)),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onChanged: _onCambioTexto,
-                  onSubmitted: _ejecutarBusqueda,
-                ),
+          Expanded(
+            child: Container(
+              // El fondo blanco y la altura ahora los pone ESTE Container,
+              // no el TextField/InputDecorator — con isDense/isCollapsed
+              // seguía quedando más bajo que el botón "Buscar" porque el
+              // InputDecorator no siempre estira su fillColor a ocupar
+              // toda la altura del SizedBox padre (medido: 56px de alto
+              // real contra 115px del botón, con la MISMA alturaCampo).
+              // Así, el alto de la caja blanca depende solo de este
+              // Container, sin ninguna lógica interna de Flutter de por
+              // medio que lo pueda achicar.
+              height: alturaCampo,
+              padding: EdgeInsets.symmetric(horizontal: s.sp(10)),
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(s.r(8)),
               ),
-              SizedBox(width: s.sp(8)),
-              ElevatedButton(
-                onPressed: () => _ejecutarBusqueda(_codigoCtrl.text),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.purple,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(
-                      horizontal: s.sp(18), vertical: s.sp(14)),
-                  textStyle: TextStyle(fontSize: s.f(14)),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(s.r(8))),
+              child: TextField(
+                controller: _codigoCtrl,
+                autocorrect: false,
+                enableSuggestions: false,
+                enableIMEPersonalizedLearning: false,
+                textAlignVertical: TextAlignVertical.center,
+                style:
+                    TextStyle(color: AppColors.textDark, fontSize: s.f(13)),
+                decoration: InputDecoration(
+                  hintText: 'Código del lote o de la orden',
+                  hintStyle: TextStyle(
+                      color: AppColors.textMuted, fontSize: s.f(13)),
+                  isDense: true,
+                  isCollapsed: true,
+                  border: InputBorder.none,
                 ),
-                child: const Text('Buscar'),
+                onChanged: _onCambioTexto,
+                onSubmitted: _ejecutarBusqueda,
               ),
-            ],
+            ),
           ),
-          SizedBox(height: s.sp(6)),
-          Text('O ingresa el código manualmente',
-              style: TextStyle(color: AppColors.textMuted, fontSize: s.f(11))),
+          SizedBox(width: s.sp(8)),
+          // Container + InkWell en vez de ElevatedButton: medido en
+          // pantalla, el ElevatedButton (aun con tapTargetSize.shrinkWrap +
+          // minimumSize.zero) seguía sin respetar la altura del SizedBox —
+          // el campo de texto medía 56px reales contra 115px del botón,
+          // con la misma alturaCampo. Un Container con altura explícita no
+          // tiene ninguna lógica interna de Material que lo pueda inflar.
+          Material(
+            color: AppColors.purple,
+            borderRadius: BorderRadius.circular(s.r(8)),
+            child: InkWell(
+              onTap: () => _ejecutarBusqueda(_codigoCtrl.text),
+              borderRadius: BorderRadius.circular(s.r(8)),
+              child: Container(
+                height: alturaCampo,
+                padding: EdgeInsets.symmetric(horizontal: s.sp(18)),
+                alignment: Alignment.center,
+                child: Text('Buscar',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: s.f(14),
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -403,7 +433,11 @@ class _HomeScreenState extends State<HomeScreen> {
           if (resultados.isEmpty)
             _mensajeVacio(s, 'No se encontraron lotes con ese código.')
           else
-            ...resultados.map((l) => _tarjetaLote(s, l)),
+            ...List.generate(
+              resultados.length,
+              (i) => _tarjetaLote(s, resultados[i],
+                  ultima: i == resultados.length - 1),
+            ),
         ],
       );
     }
@@ -425,7 +459,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _mensajeVacio(s,
               'No has escaneado ningún lote todavía.\nUsa el botón de escaneo o el buscador de arriba.')
         else
-          ..._recientes.map((l) => _tarjetaLote(s, l)),
+          ...List.generate(
+            _recientes.length,
+            (i) => _tarjetaLote(s, _recientes[i],
+                ultima: i == _recientes.length - 1),
+          ),
       ],
     );
   }
@@ -449,21 +487,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CircularProgressIndicator(color: AppColors.green)),
           )
         else
-          ..._ordenesLinea.map((o) => _tarjetaOrden(s, o)),
+          ...List.generate(
+            _ordenesLinea.length,
+            (i) => _tarjetaOrden(s, _ordenesLinea[i],
+                ultima: i == _ordenesLinea.length - 1),
+          ),
       ],
     );
   }
 
-  Widget _tarjetaOrden(AppScale s, OrdenInfo o) {
+  // Filas planas separadas por una línea tenue en vez de tarjetas blancas
+  // apiladas — el texto queda directo sobre el fondo oscuro y el divisor
+  // (con padding a los lados) evita que una fila "toque" a la siguiente.
+  Widget _filaLista({
+    required AppScale s,
+    required VoidCallback onTap,
+    required String titulo,
+    required String? subtitulo,
+    required Widget badge,
+    bool ultima = false,
+  }) {
     return InkWell(
-      onTap: () => _abrirOrden(o.numero),
-      borderRadius: BorderRadius.circular(s.r(10)),
+      onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: s.sp(8)),
-        padding: EdgeInsets.symmetric(horizontal: s.sp(14), vertical: s.sp(12)),
+        padding: EdgeInsets.symmetric(vertical: s.sp(12)),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
-          borderRadius: BorderRadius.circular(s.r(10)),
+          border: ultima
+              ? null
+              : const Border(bottom: BorderSide(color: Colors.white12)),
         ),
         child: Row(
           children: [
@@ -472,22 +523,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    o.folio,
+                    titulo,
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: s.f(14),
                         fontFamily: 'monospace',
-                        color: AppColors.textDark),
+                        color: Colors.white),
                   ),
-                  Text(
-                    o.proceso,
-                    style: TextStyle(
-                        fontSize: s.f(11.5), color: AppColors.textMuted),
-                  ),
+                  if (subtitulo != null)
+                    Text(
+                      subtitulo,
+                      style: TextStyle(
+                          fontSize: s.f(11.5), color: AppColors.textMuted),
+                    ),
                 ],
               ),
             ),
-            BadgeEstadoOrden(estado: o.estado),
+            badge,
             SizedBox(width: s.sp(6)),
             Icon(Icons.chevron_right,
                 color: AppColors.textMuted, size: s.ic(20)),
@@ -497,15 +549,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _tarjetaOrden(AppScale s, OrdenInfo o, {bool ultima = false}) {
+    return _filaLista(
+      s: s,
+      onTap: () => _abrirOrden(o.numero),
+      titulo: o.folio,
+      subtitulo: o.proceso,
+      badge: BadgeEstadoOrden(estado: o.estado),
+      ultima: ultima,
+    );
+  }
+
   Widget _mensajeVacio(AppScale s, String texto) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(s.sp(24)),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(s.r(12)),
-      ),
-      alignment: Alignment.center,
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: s.sp(24)),
       child: Text(
         texto,
         textAlign: TextAlign.center,
@@ -514,47 +571,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _tarjetaLote(AppScale s, LoteResumen l) {
-    return InkWell(
+  Widget _tarjetaLote(AppScale s, LoteResumen l, {bool ultima = false}) {
+    return _filaLista(
+      s: s,
       onTap: () => _abrirLote(l.numero),
-      borderRadius: BorderRadius.circular(s.r(10)),
-      child: Container(
-        margin: EdgeInsets.only(bottom: s.sp(8)),
-        padding: EdgeInsets.symmetric(horizontal: s.sp(14), vertical: s.sp(12)),
-        decoration: BoxDecoration(
-          color: AppColors.bgCard,
-          borderRadius: BorderRadius.circular(s.r(10)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l.folio,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: s.f(14),
-                        fontFamily: 'monospace',
-                        color: AppColors.textDark),
-                  ),
-                  if (l.ordenFolio != null)
-                    Text(
-                      'De ${l.ordenFolio}',
-                      style: TextStyle(
-                          fontSize: s.f(11.5), color: AppColors.textMuted),
-                    ),
-                ],
-              ),
-            ),
-            BadgeEstadoLote(estado: l.estado),
-            SizedBox(width: s.sp(6)),
-            Icon(Icons.chevron_right,
-                color: AppColors.textMuted, size: s.ic(20)),
-          ],
-        ),
-      ),
+      titulo: l.folio,
+      subtitulo: l.ordenFolio != null ? 'De ${l.ordenFolio}' : null,
+      badge: BadgeEstadoLote(estado: l.estado),
+      ultima: ultima,
     );
   }
 }

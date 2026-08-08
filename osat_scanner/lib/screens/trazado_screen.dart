@@ -132,6 +132,8 @@ class _TrazadoScreenState extends State<TrazadoScreen> {
                           ),
                         ],
                         SizedBox(height: s.sp(14)),
+                        _ProgresoGeneralLote(pct: lote.progresoEtapaActual, s: s),
+                        SizedBox(height: s.sp(16)),
                         TrazabilidadStepper(
                           lote: lote,
                           onCompletarEtapa: lote.puedeCompletarEtapa
@@ -143,8 +145,6 @@ class _TrazadoScreenState extends State<TrazadoScreen> {
                                 }
                               : null,
                         ),
-                        SizedBox(height: s.sp(14)),
-                        _ProgresoGeneralLote(pct: lote.progresoEtapaActual, s: s),
                         SizedBox(height: s.sp(14)),
                         _botonesAccion(context, s, lote),
                       ],
@@ -220,65 +220,56 @@ class _SelectorLotesHermanos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: s.sp(10), horizontal: s.sp(12)),
-      decoration: BoxDecoration(
-        color: AppColors.bgTopbar,
-        borderRadius: BorderRadius.circular(s.r(10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Otros lotes de esta orden',
-              style: TextStyle(color: AppColors.textMuted, fontSize: s.f(11.5))),
-          SizedBox(height: s.sp(8)),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: lotes.map((l) {
-                final seleccionado = l.numero == actual;
-                return Padding(
-                  padding: EdgeInsets.only(right: s.sp(8)),
-                  child: GestureDetector(
-                    onTap: () => onSeleccionar(l.numero),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: s.sp(14), vertical: s.sp(9)),
-                      decoration: BoxDecoration(
-                        color: seleccionado
-                            ? AppColors.purple
-                            : AppColors.bgCard,
-                        borderRadius: BorderRadius.circular(20),
-                        border: seleccionado
-                            ? null
-                            : Border.all(color: AppColors.borderCard),
-                      ),
-                      child: Text(
-                        l.folio,
-                        style: TextStyle(
-                          fontSize: s.f(12.5),
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.w600,
-                          color: seleccionado
-                              ? Colors.white
-                              : AppColors.textDark,
-                        ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Otros lotes de esta orden',
+            style: TextStyle(color: AppColors.textMuted, fontSize: s.f(11.5))),
+        SizedBox(height: s.sp(8)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: lotes.map((l) {
+              final seleccionado = l.numero == actual;
+              return Padding(
+                padding: EdgeInsets.only(right: s.sp(8)),
+                child: GestureDetector(
+                  onTap: () => onSeleccionar(l.numero),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: s.sp(14), vertical: s.sp(9)),
+                    decoration: BoxDecoration(
+                      color: seleccionado
+                          ? AppColors.purple
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      border: seleccionado
+                          ? null
+                          : Border.all(color: Colors.white24),
+                    ),
+                    child: Text(
+                      l.folio,
+                      style: TextStyle(
+                        fontSize: s.f(12.5),
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                        color: seleccionado ? Colors.white : Colors.white70,
                       ),
                     ),
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              );
+            }).toList(),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// Avance general del lote (pasos aprobados / total). Usa una barra estándar
-/// con el % como texto aparte para que a 0% no se vea un pedazo de texto
-/// apachurrado dentro de una franja de 2% de ancho.
+/// Avance general del lote (pasos aprobados / total) — directamente sobre
+/// el fondo oscuro, sin tarjeta blanca, para que quede visualmente unido
+/// al camino de etapas de arriba en vez de verse como un módulo aparte.
 class _ProgresoGeneralLote extends StatelessWidget {
   final double pct;
   final AppScale s;
@@ -286,43 +277,35 @@ class _ProgresoGeneralLote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(s.sp(14)),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(s.r(12)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Progreso general del lote',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: s.f(14),
-                      color: AppColors.textDark)),
-              Text('${(pct * 100).toStringAsFixed(0)}%',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: s.f(14),
-                      color: AppColors.purple)),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Progreso general del lote',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: s.f(14),
+                    color: Colors.white)),
+            Text('${(pct * 100).toStringAsFixed(0)}%',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: s.f(14),
+                    color: AppColors.purple)),
+          ],
+        ),
+        SizedBox(height: s.sp(8)),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: pct,
+            minHeight: s.sp(14),
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.purple),
           ),
-          SizedBox(height: s.sp(8)),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: pct,
-              minHeight: s.sp(14),
-              backgroundColor: const Color(0xFFE2E8F0),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.purple),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

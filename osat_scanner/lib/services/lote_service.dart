@@ -45,6 +45,14 @@ class LoteService {
       throw ApiException(
           'Este lote fue rechazado y ya no puede continuar con más etapas.');
     }
+    if (lote.ordenEnHold) {
+      throw ApiException(
+          'La orden de este lote está en Hold por exceso de scrap. Libérala antes de continuar.');
+    }
+    if (lote.ordenRechazada) {
+      throw ApiException(
+          'La orden de este lote fue rechazada. No se pueden completar más etapas.');
+    }
 
     final etapaActual = lote.etapaActual;
     if (etapaActual == null) {
