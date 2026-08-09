@@ -51,6 +51,15 @@ class ApiClient {
           .get(Uri.parse(url), headers: await _headers(auth: auth))
           .timeout(const Duration(seconds: 10));
       return _handle(res);
+      // _handle() ya clasifica sus propios errores (401, 400 con mensaje
+      // parseado, etc.) — el catch de abajo es solo para errores de red
+      // reales (timeout, sin conexión). Sin el catch ApiException/rethrow
+      // aquí, ese catch genérico volvía a atrapar el ApiException de
+      // _handle() y lo reescribía como "Sin conexión al servidor:
+      // <mensaje real>" (perdiendo también el statusCode), aunque el
+      // server sí había respondido.
+    } on ApiException {
+      rethrow;
     } on Exception catch (e) {
       throw ApiException('Sin conexión al servidor: $e');
     }
@@ -64,6 +73,8 @@ class ApiClient {
               headers: await _headers(auth: auth), body: jsonEncode(body))
           .timeout(const Duration(seconds: 10));
       return _handle(res);
+    } on ApiException {
+      rethrow;
     } on Exception catch (e) {
       throw ApiException('Sin conexión al servidor: $e');
     }
@@ -77,6 +88,8 @@ class ApiClient {
               headers: await _headers(auth: auth), body: jsonEncode(body))
           .timeout(const Duration(seconds: 10));
       return _handle(res);
+    } on ApiException {
+      rethrow;
     } on Exception catch (e) {
       throw ApiException('Sin conexión al servidor: $e');
     }
@@ -94,10 +107,26 @@ class ApiClient {
     String msg = 'Error del servidor (${res.statusCode})';
     try {
       final decoded = jsonDecode(utf8.decode(res.bodyBytes));
-      if (decoded is Map && decoded.isNotEmpty) {
-        msg = decoded.values.first.toString();
+      // DRF serializa un ValidationError de string plano (como los que
+      // lanza CreatePasoRealizadoSerializer.create() para reglas de
+      // negocio: lote en Hold, orden rechazada, etc.) como una lista JSON
+      // en la raíz — no como un Map — así que sin este caso el mensaje
+      // real quedaba descartado y el operador solo veía "Error del
+      // servidor (400)", que se leía como una falla de conexión genérica.
+      if (decoded is List && decoded.isNotEmpty) {
+        msg = _flattenError(decoded.first);
+      } else if (decoded is Map && decoded.isNotEmpty) {
+        msg = _flattenError(decoded.values.first);
       }
     } catch (_) {}
     throw ApiException(msg, statusCode: res.statusCode);
+  }
+
+  static String _flattenError(dynamic value) {
+    if (value is List && value.isNotEmpty) return _flattenError(value.first);
+    if (value is Map && value.isNotEmpty) {
+      return _flattenError(value.values.first);
+    }
+    return value.toString();
   }
 }

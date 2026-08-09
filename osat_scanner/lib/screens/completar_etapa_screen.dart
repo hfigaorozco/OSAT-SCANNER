@@ -169,7 +169,12 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
     final etapa = lote?.etapaActual;
     final s = AppScale.of(context);
 
-    if (lote == null || etapa == null || lote.enHold || lote.rechazado) {
+    if (lote == null ||
+        etapa == null ||
+        lote.enHold ||
+        lote.rechazado ||
+        lote.ordenEnHold ||
+        lote.ordenRechazada) {
       return Scaffold(
         backgroundColor: AppColors.bgApp,
         appBar: AppBar(backgroundColor: AppColors.bgApp),
@@ -181,7 +186,11 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                   ? 'Este lote está en Hold. No es posible registrar etapas.'
                   : lote?.rechazado == true
                       ? 'Este lote fue rechazado. Ya no puede continuar con más etapas.'
-                      : 'No hay una etapa en curso.',
+                      : lote?.ordenEnHold == true
+                          ? 'La orden de este lote está en Hold por exceso de scrap. Libérala antes de continuar.'
+                          : lote?.ordenRechazada == true
+                              ? 'La orden de este lote fue rechazada. No se pueden completar más etapas.'
+                              : 'No hay una etapa en curso.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white, fontSize: s.f(14)),
             ),
@@ -234,34 +243,43 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                                   color: AppColors.textMuted)),
                         ],
                       ),
-                      StreamBuilder<int>(
-                        stream: _timerStream,
-                        builder: (context, _) {
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: s.sp(10), vertical: s.sp(5)),
-                            decoration: BoxDecoration(
-                              color: AppColors.badgeYellowBg,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.access_time,
-                                    size: s.ic(13),
-                                    color: AppColors.badgeYellowText),
-                                SizedBox(width: s.sp(4)),
-                                Text(
-                                  _formatElapsed(
-                                      _stopwatch.elapsed.inSeconds),
-                                  style: TextStyle(
-                                      fontSize: s.f(12),
-                                      color: AppColors.badgeYellowText,
-                                      fontWeight: FontWeight.w600),
+                      Row(
+                        children: [
+                          StreamBuilder<int>(
+                            stream: _timerStream,
+                            builder: (context, _) {
+                              return Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: s.sp(10), vertical: s.sp(5)),
+                                decoration: BoxDecoration(
+                                  color: AppColors.badgeYellowBg,
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.access_time,
+                                        size: s.ic(13),
+                                        color: AppColors.badgeYellowText),
+                                    SizedBox(width: s.sp(4)),
+                                    Text(
+                                      _formatElapsed(
+                                          _stopwatch.elapsed.inSeconds),
+                                      style: TextStyle(
+                                          fontSize: s.f(12),
+                                          color: AppColors.badgeYellowText,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close,
+                                color: AppColors.textMuted, size: s.ic(22)),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -435,6 +453,9 @@ class _CompletarEtapaScreenState extends State<CompletarEtapaScreen> {
                         TextField(
                           controller: _obsCtrl,
                           maxLines: 3,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          enableIMEPersonalizedLearning: false,
                           style: TextStyle(fontSize: s.f(14)),
                           decoration: InputDecoration(
                             hintText: _resultado == 'enhol'

@@ -62,7 +62,7 @@ class _HoldScreenState extends State<HoldScreen> {
             constraints: BoxConstraints(maxWidth: s.sp(480)),
             padding: EdgeInsets.all(s.sp(20)),
             decoration: BoxDecoration(
-              color: AppColors.bgCard,
+              color: AppColors.bgTopbar,
               borderRadius: BorderRadius.circular(s.r(16)),
             ),
             child: Column(
@@ -77,7 +77,7 @@ class _HoldScreenState extends State<HoldScreen> {
                       style: TextStyle(
                           fontSize: s.f(18),
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textDark),
+                          color: Colors.white),
                     ),
                     IconButton(
                       icon: Icon(Icons.close,
@@ -95,13 +95,14 @@ class _HoldScreenState extends State<HoldScreen> {
                   TextSpan(
                     style: TextStyle(
                         fontSize: s.f(13.5),
-                        color: AppColors.textDark,
+                        color: Colors.white70,
                         height: 1.5),
                     children: [
                       const TextSpan(text: 'El lote '),
                       TextSpan(
                         text: lote?.folio ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       const TextSpan(
                           text: ' quedará detenido hasta que se resuelva el motivo.'),
@@ -113,21 +114,28 @@ class _HoldScreenState extends State<HoldScreen> {
                     style: TextStyle(
                         fontSize: s.f(13),
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textDark)),
+                        color: Colors.white)),
                 SizedBox(height: s.sp(8)),
                 TextField(
                   controller: _motivoCtrl,
                   maxLines: 4,
-                  style: TextStyle(fontSize: s.f(14)),
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  enableIMEPersonalizedLearning: false,
+                  style: TextStyle(fontSize: s.f(14), color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Describe el motivo del hold...',
                     hintStyle: TextStyle(
                         fontSize: s.f(13), color: AppColors.textMuted),
                     filled: true,
-                    fillColor: const Color(0xFFF7FAFC),
+                    fillColor: Colors.white.withValues(alpha: 0.06),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(s.r(8)),
-                      borderSide: const BorderSide(color: AppColors.borderCard),
+                      borderSide: const BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(s.r(8)),
+                      borderSide: const BorderSide(color: AppColors.gold),
                     ),
                   ),
                 ),
