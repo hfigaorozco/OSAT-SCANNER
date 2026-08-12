@@ -1,8 +1,9 @@
-/// Mismos 3 tipos que clasifica el backend (osat_tracer/api_kpi/views.py::
-/// AlertasOperadorAPIView, misma regla que client/kpi/views.py::_build_alertas
-/// en la web): 'kpi' si la alerta viene de un Registro_Kpi, 'produccion' si
-/// viene de un Paso_Realizado, si no 'stock'.
-enum TipoAlertaOperador { stock, produccion, kpi }
+/// Mismos tipos que clasifica el backend (osat_tracer/api_kpi/views.py::
+/// AlertasOperadorAPIView): 'kpi' si la alerta viene de un Registro_Kpi,
+/// 'produccion' si viene de un Paso_Realizado, 'hold' si el texto de la
+/// alerta es un aviso de lote/orden puesto en Hold (reconocido por patrón,
+/// ya que esas alertas no tienen FK propio — ver el backend), si no 'stock'.
+enum TipoAlertaOperador { stock, produccion, kpi, hold }
 
 TipoAlertaOperador tipoAlertaFromString(String? raw) {
   switch ((raw ?? '').toLowerCase()) {
@@ -10,6 +11,8 @@ TipoAlertaOperador tipoAlertaFromString(String? raw) {
       return TipoAlertaOperador.produccion;
     case 'kpi':
       return TipoAlertaOperador.kpi;
+    case 'hold':
+      return TipoAlertaOperador.hold;
     default:
       return TipoAlertaOperador.stock;
   }
