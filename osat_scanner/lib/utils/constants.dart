@@ -54,8 +54,17 @@ class ApiConfig {
   ///
   /// Se puede sobreescribir en tiempo de compilación sin tocar este archivo:
   /// flutter run --dart-define=API_HOST=127.0.0.1
+  ///
+  /// ── FERIA (hotspot de datos móviles) ──────────────────────────────
+  /// Mientras dure la feria de proyectos finales, el default apunta a la
+  /// IP de la laptop cuando está conectada al hotspot del celular
+  /// ('172.20.10.13'). Para volver a usar el emulador/casa después:
+  ///   - Emulador: defaultValue: '10.0.2.2'
+  ///   - Dispositivo físico en casa (WiFi): defaultValue: '192.168.1.118'
+  ///   - HotSpot iphone wally: defaultValue: '172.20.10.13'
+  ///     (o la IP que muestre `ipconfig` en ese momento)
   static const String _host =
-      String.fromEnvironment('API_HOST', defaultValue: '10.0.2.2');
+      String.fromEnvironment('API_HOST', defaultValue: '172.20.10.13');
   static const String baseUrl = 'http://$_host:8001/api';
 
   static const String login = '$baseUrl/v1/auth/login/';

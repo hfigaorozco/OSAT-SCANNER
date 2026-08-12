@@ -312,6 +312,8 @@ IconData _iconoPorTipo(TipoAlertaOperador tipo) {
       return Icons.precision_manufacturing;
     case TipoAlertaOperador.kpi:
       return Icons.bar_chart;
+    case TipoAlertaOperador.hold:
+      return Icons.pause_circle_filled;
     case TipoAlertaOperador.stock:
       return Icons.inventory_2;
   }
@@ -323,6 +325,8 @@ Color _colorPorTipo(TipoAlertaOperador tipo) {
       return AppColors.red;
     case TipoAlertaOperador.kpi:
       return AppColors.alertaKpi;
+    case TipoAlertaOperador.hold:
+      return AppColors.gold;
     case TipoAlertaOperador.stock:
       return AppColors.gold;
   }
@@ -437,6 +441,8 @@ class _AlertaDetalle extends StatelessWidget {
         return 'Producción';
       case TipoAlertaOperador.kpi:
         return 'KPI';
+      case TipoAlertaOperador.hold:
+        return 'Hold';
       case TipoAlertaOperador.stock:
         return 'Stock';
     }

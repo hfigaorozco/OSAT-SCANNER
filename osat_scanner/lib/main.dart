@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'models/alerta_operador.dart';
 import 'providers/auth_provider.dart';
 import 'providers/lote_provider.dart';
+import 'services/alerta_service.dart';
 import 'services/auth_service.dart';
 import 'utils/constants.dart';
 import 'utils/navigation.dart';
@@ -66,6 +68,15 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
   bool _wasLocked = false;
   bool _wasLoggedIn = false;
 
+  // ── Pop-up de Hold (feria) ── ver AlertasOperadorAPIView (backend) para
+  // el tipo 'hold': se dispara cuando un lote/orden de la línea del
+  // operador entra en Hold desde web (manual o por exceso de scrap),
+  // avisando de inmediato sin necesidad de refrescar ninguna pantalla.
+  Timer? _holdPollTimer;
+  final Set<int> _alertasHoldVistas = {};
+  bool _holdPollSembrado = false;
+  bool _holdDialogAbierto = false;
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +99,103 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
         auth.lockNow();
       }
     });
+  }
+
+  void _iniciarPollHold() {
+    _holdPollTimer?.cancel();
+    _alertasHoldVistas.clear();
+    _holdPollSembrado = false;
+    _holdPollTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _revisarAlertasHold());
+  }
+
+  void _detenerPollHold() {
+    _holdPollTimer?.cancel();
+    _holdPollTimer = null;
+  }
+
+  /// Poll de alertas de Hold — sin esto el operador solo se entera de que
+  /// debe parar producción al intentar completar una etapa y que el
+  /// servidor la rechace (ver CreatePasoRealizadoSerializer en el backend,
+  /// que ya bloquea eso), o si refresca manualmente la pantalla de
+  /// Alertas. Este timer avisa de inmediato con un pop-up, sin refresh.
+  Future<void> _revisarAlertasHold() async {
+    if (!mounted || _holdDialogAbierto) return;
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn || auth.isLocked) return;
+
+    List<AlertaOperador> alertas;
+    try {
+      alertas = await AlertaService.listar(empleadoNumero: auth.empleado?.numero);
+    } catch (_) {
+      return; // red inestable — se reintenta solo en el próximo tick
+    }
+    final holds = alertas.where((a) =>
+        a.tipo == TipoAlertaOperador.hold && a.esMiLinea == true && !a.leida);
+
+    if (!_holdPollSembrado) {
+      // Primer poll tras iniciar sesión: las alertas de Hold que ya
+      // existían de antes no deben disparar el pop-up, solo las nuevas.
+      _alertasHoldVistas.addAll(holds.map((a) => a.numero));
+      _holdPollSembrado = true;
+      return;
+    }
+
+    for (final a in holds) {
+      if (_alertasHoldVistas.contains(a.numero)) continue;
+      _alertasHoldVistas.add(a.numero);
+      await _mostrarDialogHold(a);
+      break; // una a la vez — si hay más, el siguiente tick muestra la próxima
+    }
+  }
+
+  Future<void> _mostrarDialogHold(AlertaOperador alerta) async {
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null) return;
+    _holdDialogAbierto = true;
+    try {
+      bool enviando = false;
+      await showDialog<void>(
+        context: ctx,
+        barrierDismissible: false,
+        builder: (dialogCtx) => PopScope(
+          canPop: false,
+          child: StatefulBuilder(
+            builder: (dialogCtx, setDialogState) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.pause_circle_filled, color: AppColors.gold, size: 26),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Producción en Hold')),
+                ],
+              ),
+              content: Text(
+                alerta.descripcion,
+                style: const TextStyle(height: 1.4),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: enviando
+                      ? null
+                      : () async {
+                          setDialogState(() => enviando = true);
+                          try {
+                            await AlertaService.marcarLeida(alerta.numero);
+                          } catch (_) {}
+                          if (dialogCtx.mounted) Navigator.of(dialogCtx).pop();
+                        },
+                  child: Text(enviando
+                      ? 'Confirmando…'
+                      : 'Confirmar que se detuvo la producción'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } finally {
+      _holdDialogAbierto = false;
+    }
   }
 
   // El primer frame de Flutter arranca con la superficie en 0x0 (todavía no
@@ -137,6 +245,7 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _inactivityTimer?.cancel();
+    _holdPollTimer?.cancel();
     // Restaurar todas las orientaciones al salir
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -173,6 +282,11 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
     // seguido de cero toques no arrancaría ningún timer nuevo.
     if ((_wasLocked && !auth.isLocked) || (!_wasLoggedIn && auth.isLoggedIn)) {
       _reiniciarTimerInactividad();
+    }
+    if (!_wasLoggedIn && auth.isLoggedIn) {
+      _iniciarPollHold();
+    } else if (_wasLoggedIn && !auth.isLoggedIn) {
+      _detenerPollHold();
     }
     _wasLocked = auth.isLocked;
     _wasLoggedIn = auth.isLoggedIn;
