@@ -21,7 +21,13 @@ class _AlertasScreenState extends State<AlertasScreen> {
   List<AlertaOperador> _alertas = [];
   AlertaOperador? _seleccionada;
   bool _loading = true;
-  String _filtro = 'todas'; // todas | no_leidas | produccion | kpi | stock
+  String _filtro = 'todas'; // todas | no_leidas | produccion | kpi | hold | stock
+  String _busqueda = '';
+  // El panel de detalle (teléfono) arranca colapsado — con muchos datos
+  // (folio, orden, línea, operador, bloque de KPI/producción) siempre
+  // abierto tapaba la lista de arriba y no dejaba navegar cómodo entre
+  // alertas. Colapsado = solo una barra resumen; un toque la expande.
+  bool _detalleColapsado = true;
 
   @override
   void initState() {
@@ -41,7 +47,10 @@ class _AlertasScreenState extends State<AlertasScreen> {
       setState(() {
         _alertas = lista;
         _loading = false;
-        if (_alertas.isNotEmpty) _seleccionada = _alertas.first;
+        if (_alertas.isNotEmpty) {
+          _seleccionada = _alertas.first;
+          _detalleColapsado = true;
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -55,7 +64,16 @@ class _AlertasScreenState extends State<AlertasScreen> {
   /// leídas" y el badge del bottom nav nunca bajaban por nada que hiciera
   /// el operador en la app.
   Future<void> _seleccionar(AlertaOperador a) async {
-    setState(() => _seleccionada = a);
+    if (_seleccionada?.numero == a.numero) {
+      // Ya estaba seleccionada — un segundo toque solo colapsa/expande el
+      // detalle, sin volver a pegarle al backend para marcarla leída.
+      setState(() => _detalleColapsado = !_detalleColapsado);
+      return;
+    }
+    setState(() {
+      _seleccionada = a;
+      _detalleColapsado = false;
+    });
     if (a.leida) return;
     final idx = _alertas.indexWhere((x) => x.numero == a.numero);
     final actualizada = a.copyWith(leida: true);
@@ -71,18 +89,37 @@ class _AlertasScreenState extends State<AlertasScreen> {
   }
 
   List<AlertaOperador> get _filtradas {
+    Iterable<AlertaOperador> base;
     switch (_filtro) {
       case 'no_leidas':
-        return _alertas.where((a) => !a.leida).toList();
+        base = _alertas.where((a) => !a.leida);
+        break;
       case 'produccion':
-        return _alertas.where((a) => a.tipo == TipoAlertaOperador.produccion).toList();
+        base = _alertas.where((a) => a.tipo == TipoAlertaOperador.produccion);
+        break;
       case 'kpi':
-        return _alertas.where((a) => a.tipo == TipoAlertaOperador.kpi).toList();
+        base = _alertas.where((a) => a.tipo == TipoAlertaOperador.kpi);
+        break;
+      case 'hold':
+        base = _alertas.where((a) => a.tipo == TipoAlertaOperador.hold);
+        break;
       case 'stock':
-        return _alertas.where((a) => a.tipo == TipoAlertaOperador.stock).toList();
+        base = _alertas.where((a) => a.tipo == TipoAlertaOperador.stock);
+        break;
       default:
-        return _alertas;
+        base = _alertas;
     }
+    final q = _busqueda.trim().toLowerCase();
+    if (q.isEmpty) return base.toList();
+    return base.where((a) {
+      final texto = [
+        a.descripcion,
+        a.folioLote ?? '',
+        a.folioOrden ?? '',
+        a.lineaNombre ?? '',
+      ].join(' ').toLowerCase();
+      return texto.contains(q);
+    }).toList();
   }
 
   void _onNavTap(int index) {
@@ -124,6 +161,25 @@ class _AlertasScreenState extends State<AlertasScreen> {
                     fontWeight: FontWeight.bold),
               ),
               SizedBox(height: s.sp(14)),
+              Container(
+                height: s.h(40),
+                decoration: BoxDecoration(
+                  color: AppColors.bgTopbar,
+                  borderRadius: BorderRadius.circular(s.r(10)),
+                ),
+                child: TextField(
+                  onChanged: (v) => setState(() => _busqueda = v),
+                  style: TextStyle(color: Colors.white, fontSize: s.f(13.5)),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por texto, folio o línea…',
+                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: s.f(13.5)),
+                    prefixIcon: Icon(Icons.search, size: s.ic(18), color: AppColors.textMuted),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: s.sp(10)),
+                  ),
+                ),
+              ),
+              SizedBox(height: s.sp(10)),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -138,6 +194,12 @@ class _AlertasScreenState extends State<AlertasScreen> {
                         s: s,
                         label: 'No leídas',
                         value: 'no_leidas',
+                        current: _filtro,
+                        onTap: (v) => setState(() => _filtro = v)),
+                    _FiltroChip(
+                        s: s,
+                        label: 'Hold',
+                        value: 'hold',
                         current: _filtro,
                         onTap: (v) => setState(() => _filtro = v)),
                     _FiltroChip(
@@ -254,7 +316,15 @@ class _AlertasScreenState extends State<AlertasScreen> {
                       },
                     ),
         ),
-        if (_seleccionada != null) _AlertaDetalle(s: s, alerta: _seleccionada!),
+        if (_seleccionada != null)
+          _AlertaDetalle(
+            s: s,
+            alerta: _seleccionada!,
+            colapsado: _detalleColapsado,
+            onToggleColapsar: () =>
+                setState(() => _detalleColapsado = !_detalleColapsado),
+            onCerrar: () => setState(() => _seleccionada = null),
+          ),
         const SizedBox(height: 12),
       ],
     );
@@ -433,7 +503,16 @@ Future<void> _abrirLoteDeAlerta(BuildContext context, int loteNumero) async {
 class _AlertaDetalle extends StatelessWidget {
   final AppScale s;
   final AlertaOperador alerta;
-  const _AlertaDetalle({required this.s, required this.alerta});
+  final bool colapsado;
+  final VoidCallback? onToggleColapsar;
+  final VoidCallback? onCerrar;
+  const _AlertaDetalle({
+    required this.s,
+    required this.alerta,
+    this.colapsado = false,
+    this.onToggleColapsar,
+    this.onCerrar,
+  });
 
   String get _etiquetaTipo {
     switch (alerta.tipo) {
@@ -491,19 +570,51 @@ class _AlertaDetalle extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: alerta.leida ? AppColors.green : AppColors.red)),
               ),
+              if (onToggleColapsar != null) ...[
+                SizedBox(width: s.sp(4)),
+                InkWell(
+                  onTap: onToggleColapsar,
+                  borderRadius: BorderRadius.circular(s.r(6)),
+                  child: Padding(
+                    padding: EdgeInsets.all(s.sp(4)),
+                    child: Icon(
+                        colapsado ? Icons.expand_more : Icons.expand_less,
+                        size: s.ic(18),
+                        color: AppColors.textMuted),
+                  ),
+                ),
+              ],
+              if (onCerrar != null) ...[
+                InkWell(
+                  onTap: onCerrar,
+                  borderRadius: BorderRadius.circular(s.r(6)),
+                  child: Padding(
+                    padding: EdgeInsets.all(s.sp(4)),
+                    child: Icon(Icons.close,
+                        size: s.ic(18), color: AppColors.textMuted),
+                  ),
+                ),
+              ],
             ],
           ),
-          SizedBox(height: s.sp(12)),
+          SizedBox(height: s.sp(colapsado ? 6 : 12)),
           Text(alerta.descripcion,
+              maxLines: colapsado ? 1 : null,
+              overflow: colapsado ? TextOverflow.ellipsis : TextOverflow.visible,
               style: TextStyle(
                   fontSize: s.f(15),
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   height: 1.4)),
+          if (!colapsado) ...[
           SizedBox(height: s.sp(16)),
           _DetalleRow(s: s, icon: Icons.tag, label: 'Alerta', value: '#${alerta.numero}'),
           _DetalleRow(s: s, icon: Icons.calendar_today_outlined, label: 'Fecha', value: alerta.fecha.isNotEmpty ? alerta.fecha : '—'),
           _DetalleRow(s: s, icon: Icons.access_time, label: 'Hora', value: alerta.hora.isNotEmpty ? alerta.hora : '—'),
+          if (alerta.folioLote != null)
+            _DetalleRow(s: s, icon: Icons.inventory_outlined, label: 'Lote', value: alerta.folioLote!),
+          if (alerta.folioOrden != null)
+            _DetalleRow(s: s, icon: Icons.assignment_outlined, label: 'Orden', value: alerta.folioOrden!),
           if (alerta.lineaNombre != null)
             _DetalleRow(
               s: s,
@@ -514,6 +625,85 @@ class _AlertaDetalle extends StatelessWidget {
                   : alerta.lineaNombre!,
               valueColor: alerta.esMiLinea == true ? AppColors.green : null,
             ),
+          if (alerta.empleadoNombre != null)
+            _DetalleRow(s: s, icon: Icons.person_outline, label: 'Operador asignado', value: alerta.empleadoNombre!),
+          if (alerta.tipo == TipoAlertaOperador.kpi && alerta.kpiNombre != null) ...[
+            SizedBox(height: s.sp(4)),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(s.sp(12)),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(s.r(8)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(alerta.kpiNombre!,
+                          style: TextStyle(fontSize: s.f(13), fontWeight: FontWeight.w600, color: Colors.white)),
+                      Text('${alerta.kpiValor ?? '—'}',
+                          style: TextStyle(
+                              fontSize: s.f(16),
+                              fontWeight: FontWeight.w800,
+                              color: {
+                                    'verde': AppColors.green,
+                                    'amarillo': AppColors.gold,
+                                    'rojo': AppColors.red,
+                                  }[alerta.kpiSemaforo] ??
+                                  AppColors.textMuted)),
+                    ],
+                  ),
+                  SizedBox(height: s.sp(4)),
+                  Text(
+                    'Umbrales — verde ≥ ${alerta.kpiUmbralVerde} · amarillo ≥ ${alerta.kpiUmbralAmarillo} · rojo < ${alerta.kpiUmbralRojo}',
+                    style: TextStyle(fontSize: s.f(10.5), color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (alerta.tipo == TipoAlertaOperador.produccion && alerta.pasoNombre != null) ...[
+            SizedBox(height: s.sp(4)),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(s.sp(12)),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(s.r(8)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Paso: ${alerta.pasoNombre}',
+                      style: TextStyle(fontSize: s.f(13), fontWeight: FontWeight.w600, color: Colors.white)),
+                  SizedBox(height: s.sp(4)),
+                  Text('Scrap registrado: ${alerta.pasoScrap ?? 0} unidad(es)',
+                      style: TextStyle(fontSize: s.f(11.5), color: AppColors.textMuted)),
+                  if (alerta.defectos.isNotEmpty) ...[
+                    SizedBox(height: s.sp(8)),
+                    Wrap(
+                      spacing: s.sp(6),
+                      runSpacing: s.sp(6),
+                      children: alerta.defectos
+                          .map((d) => Container(
+                                padding: EdgeInsets.symmetric(horizontal: s.sp(9), vertical: s.sp(3)),
+                                decoration: BoxDecoration(
+                                  color: AppColors.red.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(s.r(20)),
+                                ),
+                                child: Text(d,
+                                    style: TextStyle(fontSize: s.f(11), fontWeight: FontWeight.w600, color: AppColors.red)),
+                              ))
+                          .toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
           if (tieneLote) ...[
             SizedBox(height: s.sp(14)),
             SizedBox(
@@ -530,6 +720,7 @@ class _AlertaDetalle extends StatelessWidget {
               ),
             ),
           ],
+          ], // fin if (!colapsado)
         ],
       ),
     );

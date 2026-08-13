@@ -2,7 +2,13 @@
     <application
         android:label="osat_scanner"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        <!-- El backend (client/osat_tracer) corre en HTTP plano sobre la LAN/hotspot,
+             no HTTPS — desde Android 9 (API 28+) los builds de release bloquean
+             cleartext por default, aunque los builds debug sí lo permiten
+             automáticamente. Sin esto la app compila y se instala bien pero
+             cualquier petición al backend falla con "error de conexión". -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
