@@ -30,6 +30,19 @@ class AlertaOperador {
   final bool? esMiLinea;
   final int prioridad;
   final int? loteId;
+  final int? ordenNumero;
+  final String? folioLote;
+  final String? folioOrden;
+  final String? empleadoNombre;
+  final String? kpiNombre;
+  final int? kpiValor;
+  final int? kpiUmbralVerde;
+  final int? kpiUmbralAmarillo;
+  final int? kpiUmbralRojo;
+  final String? kpiSemaforo;
+  final String? pasoNombre;
+  final int? pasoScrap;
+  final List<String> defectos;
 
   AlertaOperador({
     required this.numero,
@@ -43,6 +56,19 @@ class AlertaOperador {
     this.lineaNombre,
     this.esMiLinea,
     this.loteId,
+    this.ordenNumero,
+    this.folioLote,
+    this.folioOrden,
+    this.empleadoNombre,
+    this.kpiNombre,
+    this.kpiValor,
+    this.kpiUmbralVerde,
+    this.kpiUmbralAmarillo,
+    this.kpiUmbralRojo,
+    this.kpiSemaforo,
+    this.pasoNombre,
+    this.pasoScrap,
+    this.defectos = const [],
   });
 
   String get tiempo {
@@ -63,12 +89,27 @@ class AlertaOperador {
       lineaNombre: lineaNombre,
       esMiLinea: esMiLinea,
       loteId: loteId,
+      ordenNumero: ordenNumero,
+      folioLote: folioLote,
+      folioOrden: folioOrden,
+      empleadoNombre: empleadoNombre,
+      kpiNombre: kpiNombre,
+      kpiValor: kpiValor,
+      kpiUmbralVerde: kpiUmbralVerde,
+      kpiUmbralAmarillo: kpiUmbralAmarillo,
+      kpiUmbralRojo: kpiUmbralRojo,
+      kpiSemaforo: kpiSemaforo,
+      pasoNombre: pasoNombre,
+      pasoScrap: pasoScrap,
+      defectos: defectos,
     );
   }
 
   /// El endpoint /v1/list/alertas_operador/ ya viene clasificado, priorizado
-  /// y con la línea resuelta desde el backend — no hay que adivinar nada
-  /// del lado del cliente.
+  /// y con la línea/lote/orden/kpi/paso resueltos desde el backend (misma
+  /// fuente que usa la web, ver _construir_alertas_base en
+  /// osat_tracer/api_kpi/views.py) — no hay que adivinar nada del lado del
+  /// cliente.
   factory AlertaOperador.fromJson(Map<String, dynamic> json) {
     return AlertaOperador(
       numero: json['numero'] as int? ?? 0,
@@ -82,6 +123,19 @@ class AlertaOperador {
       lineaNombre: json['linea_nombre'] as String?,
       esMiLinea: json['es_mi_linea'] as bool?,
       loteId: json['oblea_id'] as int?,
+      ordenNumero: json['orden_numero'] as int?,
+      folioLote: json['folio_lote'] as String?,
+      folioOrden: json['folio_orden'] as String?,
+      empleadoNombre: json['empleado_nombre'] as String?,
+      kpiNombre: json['kpi_nombre'] as String?,
+      kpiValor: json['kpi_valor'] as int?,
+      kpiUmbralVerde: json['kpi_umbral_verde'] as int?,
+      kpiUmbralAmarillo: json['kpi_umbral_amarillo'] as int?,
+      kpiUmbralRojo: json['kpi_umbral_rojo'] as int?,
+      kpiSemaforo: json['kpi_semaforo'] as String?,
+      pasoNombre: json['paso_nombre'] as String?,
+      pasoScrap: json['paso_scrap'] as int?,
+      defectos: (json['defectos'] as List?)?.map((d) => d.toString()).toList() ?? const [],
     );
   }
 }
